@@ -2,6 +2,10 @@
 # copy this file to bootstrap_config.sh.overrides and change the variables you want
 # to change (comment out ones you do not want to change).
 
+# Selects the provider to tell Vagrant to use. Acceptable values are
+# 'virtualbox' and 'vmware'.
+# export BOOTSTRAP_VM_PROVIDER=virtualbox
+
 # Sets the location to place virtual machine directories.
 # This does not have any effect when using Vagrant.
 export BCPC_VM_DIR=$HOME/BCPC-VMs

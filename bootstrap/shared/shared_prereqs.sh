@@ -36,9 +36,12 @@ fi
 # Obtain an Ubuntu netboot image to be used for PXE booting.
 download_file ubuntu-14.04-mini.iso http://archive.ubuntu.com/ubuntu/dists/trusty-updates/main/installer-amd64/current/images/netboot/mini.iso 
 
-# Obtain a Vagrant Trusty box.
-BOX=trusty-server-cloudimg-amd64-vagrant-disk1.box 
-download_file $BOX http://cloud-images.ubuntu.com/vagrant/trusty/current/$BOX
+# Obtain a Vagrant Trusty box with VirtualBox support.
+VIRTUALBOX_BOX=trusty-server-cloudimg-amd64-vagrant-disk1.box 
+download_file $VIRTUALBOX_BOX http://cloud-images.ubuntu.com/vagrant/trusty/current/$BOX
+# Obtain another Trusty box with VMware support.
+VMWARE_BOX=vmware_desktop.box
+download_file $VMWARE_BOX https://vagrantcloud.com/puphpet/boxes/ubuntu1404-x64/versions/2.0/providers/$VMWARE_BOX
 
 # Obtain Chef client and server DEBs.
 CHEF_CLIENT_DEB=chef_12.3.0-1_amd64.deb

@@ -73,7 +73,7 @@ source $REPO_ROOT/bootstrap/shared/shared_prereqs.sh
 
 # Terminate existing BCPC VMs.
 echo "Shutting down and unregistering VMs from VirtualBox..."
-$REPO_ROOT/bootstrap/vagrant_scripts/vagrant_clean.sh
+#$REPO_ROOT/bootstrap/vagrant_scripts/vagrant_clean.sh
 
 # Create VMs in Vagrant and start them.
 echo "Starting local Vagrant cluster..."

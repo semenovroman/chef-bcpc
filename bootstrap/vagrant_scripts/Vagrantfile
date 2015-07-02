@@ -6,7 +6,33 @@ require 'openssl' # used to validate CA certificates
 require 'uri' # used to parse the local mirror if one is given
 
 Vagrant.require_version ">= 1.7.0"
-ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+
+case ENV['BOOTSTRAP_VM_PROVIDER']
+when 'virtualbox'
+  ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+  $provider = 'virtualbox'
+when 'vmware'
+  if RUBY_PLATFORM.downcase.include? 'darwin'
+    ENV['VAGRANT_DEFAULT_PROVIDER'] = 'vmware_fusion'
+    $provider = 'vmware_fusion'
+  else
+    ENV['VAGRANT_DEFAULT_PROVIDER'] = 'vmware_workstation'
+    $provider = 'vmware_workstation'
+  end
+else
+  puts "No provider set, defaulting to VirtualBox."
+  ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
+  $provider = 'virtualbox'
+end
+
+case $provider
+when 'virtualbox'
+  $box_url = "#{ENV['BOOTSTRAP_CACHE_DIR']}/trusty-server-cloudimg-amd64-vagrant-disk1.box"  
+when 'vmware_fusion', 'vmware_workstation'
+  $box_url = "#{ENV['BOOTSTRAP_CACHE_DIR']}/vmware_desktop.box"
+else
+  raise "#{ENV['VAGRANT_DEFAULT_PROVIDER']} is not a supported provider, exiting."
+end
 
 # if being run via BOOT_GO.sh, ENV['REPO_ROOT'] will be the root of the repo;
 # if it is not set, set it ourselves
