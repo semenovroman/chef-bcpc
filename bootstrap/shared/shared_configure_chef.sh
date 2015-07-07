@@ -21,6 +21,9 @@ cd $REPO_ROOT/bootstrap/vagrant_scripts
 # use Chef Server embedded knife instead of the one in /usr/bin
 KNIFE=/opt/opscode/embedded/bin/knife
 
+# disable RVM on bootstrap node (the VMware box in use includes RVM)
+do_on_node bootstrap "sudo sed -i 's/^source \/usr\/local\/rvm\/scripts\/rvm$//' /etc/profile"
+
 # install and configure Chef Server 12 and Chef 12 client on the bootstrap node
 # move nginx insecure to 4000/TCP is so that Cobbler can run on the regular 80/TCP
 do_on_node bootstrap "sudo dpkg -i \$(find $FILECACHE_MOUNT_POINT/ -name chef-server\*deb -not -name \*downloaded | tail -1) \
@@ -70,7 +73,8 @@ do_on_node bootstrap "$KNIFE cookbook upload apt bcpc chef-client cron logrotate
 # install and bootstrap Chef on cluster nodes
 i=1
 for vm in $vms $mon_vms; do
-  do_on_node $vm "sudo dpkg -i \$(find $FILECACHE_MOUNT_POINT/ -name chef_\*deb -not -name \*downloaded | tail -1)"
+  do_on_node $vm "sudo sed -i 's/^source \/usr\/local\/rvm\/scripts\/rvm$//' /etc/profile"
+  do_on_node $vm "sudo dpkg -i \$(find /chef-bcpc-files/ -name chef_\*deb -not -name \*downloaded | tail -1)"
   do_on_node bootstrap "$KNIFE bootstrap -x vagrant -P vagrant --sudo 10.0.100.1${i}"
   i=`expr $i + 1`
 done
