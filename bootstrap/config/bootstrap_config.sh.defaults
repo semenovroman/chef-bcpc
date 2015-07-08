@@ -7,8 +7,9 @@
 # export BOOTSTRAP_VM_PROVIDER=virtualbox
 
 # Sets the location to place virtual machine directories.
-# This does not have any effect when using Vagrant.
-export BCPC_VM_DIR=$HOME/BCPC-VMs
+# This does not have any effect when using Vagrant with the VirtualBox provider.
+# This is used by Vagrant with the VMware provider.
+# export BCPC_VM_DIR=$HOME/BCPC-VMs
 
 # Sets the domain name to use. Note that this must also be set independently in
 # the Chef environment file.

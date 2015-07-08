@@ -7,6 +7,13 @@ require 'uri' # used to parse the local mirror if one is given
 
 Vagrant.require_version ">= 1.7.0"
 
+$vmware_bin_dir = File.join '/', 'Applications', 'VMware Fusion.app', 'Contents', 'Library'
+$vdiskmanager = File.join $vmware_bin_dir, 'vmware-vdiskmanager'
+
+if not ENV['BCPC_VM_DIR'].nil? and not ENV['BCPC_VM_DIR'].empty?
+  ENV['VAGRANT_VMWARE_CLONE_DIRECTORY'] = ENV['BCPC_VM_DIR']
+end
+
 case ENV['BOOTSTRAP_VM_PROVIDER']
 when 'virtualbox'
   ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
@@ -281,7 +288,7 @@ Vagrant.configure("2") do |config|
         cpus = ( ENV["CLUSTER_VM_CPUS"] or "2" )
         disk_size = ( ENV["CLUSTER_VM_DRIVE_SIZE"] or "20480" )
       end
-
+      
       m.vm.provider :virtualbox do |vb|
         vb.name = "bcpc-#{vm}"
         vb.memory = memory
@@ -317,6 +324,30 @@ Vagrant.configure("2") do |config|
           end # b..e each
         end # if (1..3).include? idx
       end # machine.vm.provider :virtualbox do |vb|
+# WIP: just dumping this here to be fixed later
+#    when 'vmware_fusion', 'vmware_workstation'
+#      machine.vm.provider $provider.to_sym do |vm|
+#        vm.vmx['displayname'] = "bcpc-bootstrap"
+#        vm.vmx['memsize'] = memory
+#        vm.vmx['numvcpus'] = cpus
+#        
+#        puts (vm.methods - Object.methods).sort
+#        
+#        vmdk_dir = File.join(ENV['VAGRANT_VMWARE_CLONE_DIRECTORY'], 'vm-disks')
+#        Dir.mkdir(vmdk_dir) unless Dir.exist?(vmdk_dir)
+#        
+#        vmdk = File.join vmdk_dir, 'test-file'
+#        unless File.exist? vmdk
+#          `'#{$vdiskmanager}' -c -s 20480MB -a lsilogic -t 1 #{vmdk}`
+#        end
+#        
+#        vm.vmx['scsi0:1.filename'] = vmdk
+#        vm.vmx['scsi0:1.present']  = 'TRUE'
+#        vm.vmx['scsi0:1.redo']     = ''
+#      end
+#    else
+#      raise "#{ENV['VAGRANT_DEFAULT_PROVIDER']} is not a supported provider, exiting."
+#    end # case $provider
     end # config.vm.define vm do |machine|
   end # $vms_to_build.each_with_index
 end # Vagrant.configure("2") do |config|
