@@ -5,6 +5,7 @@
 ################################################
 
 [DEFAULT]
+bindir=/usr/bin
 
 # If using qpid...
 #rpc_backend=nova.openstack.common.rpc.impl_qpid
@@ -49,29 +50,24 @@ reserved_host_memory_mb=<%=node['bcpc']['nova']['reserved_host_memory_mb']%>
 cpu_allocation_ratio=<%=node['bcpc']['nova']['cpu_allocation_ratio']%>
 
 # Nova Network settings
-network_manager=nova.network.manager.VlanManager
-firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
-allow_same_net_traffic=False
-public_interface=<%=node['bcpc']['floating']['interface']%>
-vlan_interface=<%=node['bcpc']['fixed']['vlan_interface']%>
-vlan_start=<%=node['bcpc']['fixed']['vlan_start']%>
-multi_host=True
-fixed_range=<%=node['bcpc']['fixed']['cidr']%>
-floating_range=<%=node['bcpc']['floating']['cidr']%>
-network_size=<%=node['bcpc']['fixed']['network_size']%>
+network_api_class = nova.network.api.API
+security_group_api = nova
+firewall_driver = nova.virt.libvirt.firewall.IptablesFirewallDriver
+network_manager = nova.network.manager.FlatDHCPManager
+network_size = 32
+allow_same_net_traffic = False
+multi_host = True
+send_arp_for_ha = True
+share_dhcp_address = True
+force_dhcp_release = True
+flat_network_bridge = br100
 flat_network_dns=<%=node['bcpc']['management']['vip']%>
-dhcpbridge_flagfile=/etc/nova/nova.conf
-dhcpbridge=/usr/bin/nova-dhcpbridge
-force_dhcp_release=False
-share_dhcp_address=True
-teardown_unused_network_gateway=True
-fixed_ip_disassociate_timeout=30
-dhcp_lease_time=<%=node['bcpc']['fixed']['dhcp_lease_time']%>
-send_arp_for_ha=True
-my_ip=<%=node['bcpc']['management']['ip']%>
-routing_source_ip=<%=node['bcpc']['floating']['ip']%>
+flat_interface = <%=node['bcpc']['floating']['interface']%>
+public_interface = <%=node['bcpc']['floating']['interface']%>
 dhcp_domain=<%=node['bcpc']['domain_name']%>
 default_availability_zone=<%=node['bcpc']['region_name']%>
+dhcpbridge=/usr/bin/nova-dhcpbridge
+dhcpbridge_flagfile=/etc/nova/nova.conf
 
 # Nova Compute settings
 compute_driver=libvirt.LibvirtDriver

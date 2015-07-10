@@ -38,20 +38,20 @@ bash "nova-configure-default-secgroup-rules" do
     not_if ". /root/adminrc; nova secgroup-list-default-rules | grep icmp"
 end
 
-bash "nova-floating-add" do
-    user "root"
-    code <<-EOH
-        . /root/adminrc
-        nova-manage floating create --ip_range=#{node['bcpc']['floating']['available_subnet']} --pool #{node['bcpc']['region_name']}
-    EOH
-    only_if ". /root/adminrc; nova-manage floating list | grep \"No floating IP addresses have been defined\""
-end
+#bash "nova-floating-add" do
+#    user "root"
+#    code <<-EOH
+#        . /root/adminrc
+#        nova-manage floating create --ip_range=#{node['bcpc']['floating']['available_subnet']} --pool #{node['bcpc']['region_name']}
+#    EOH
+#    only_if ". /root/adminrc; nova-manage floating list | grep \"No floating IP addresses have been defined\""
+#end
 
 bash "nova-fixed-add" do
     user "root"
     code <<-EOH
         . /root/adminrc
-        nova-manage network create --label fixed --fixed_range_v4=#{node['bcpc']['fixed']['cidr']} --num_networks=#{node['bcpc']['fixed']['num_networks']} --multi_host=T --network_size=#{node['bcpc']['fixed']['network_size']} --vlan_start=#{node['bcpc']['fixed']['vlan_start']} --bridge_interface=#{node['bcpc']['fixed']['vlan_interface']}
+        nova network-create fixed --fixed_range_v4 #{node['bcpc']['floating']['available_subnet']} --multi_host T --bridge br100
     EOH
-    only_if ". /root/adminrc; nova-manage network list | grep \"No networks found\""
+    only_if ". /root/adminrc; nova net-list | grep \"No \""
 end

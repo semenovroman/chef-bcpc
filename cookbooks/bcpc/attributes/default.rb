@@ -52,7 +52,7 @@ default['bcpc']['enabled']['monitoring'] = true
 # This will enable powerdns on head nodes
 default['bcpc']['enabled']['dns'] = true
 # This will enable iptables firewall on all nodes
-default['bcpc']['enabled']['host_firewall'] = true
+default['bcpc']['enabled']['host_firewall'] = false
 # This will enable of encryption of the chef data bag
 default['bcpc']['enabled']['encrypt_data_bag'] = false
 # This will enable auto-upgrades on all nodes (not recommended for stability)
@@ -156,7 +156,7 @@ default['bcpc']['rabbitmq']['durable_queues'] = true
 ###########################################
 #
 #  Network settings for the cluster
-#
+
 ###########################################
 default['bcpc']['management']['vip'] = "10.17.1.15"
 default['bcpc']['management']['netmask'] = "255.255.255.0"
