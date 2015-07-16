@@ -3,13 +3,14 @@
 # to change (comment out ones you do not want to change).
 
 # Selects the provider to tell Vagrant to use. Acceptable values are
-# 'virtualbox' and 'vmware'.
-# export BOOTSTRAP_VM_PROVIDER=virtualbox
+# virtualbox and vmware ("vmware" will assume VMware Fusion if on a Mac and
+# VMware Workstation otherwise).
+export BOOTSTRAP_VM_PROVIDER=virtualbox
 
 # Sets the location to place virtual machine directories.
 # This does not have any effect when using Vagrant with the VirtualBox provider.
 # This is used by Vagrant with the VMware provider.
-# export BCPC_VM_DIR=$HOME/BCPC-VMs
+export BCPC_VM_DIR=$HOME/BCPC-VMs
 
 # Sets the domain name to use. Note that this must also be set independently in
 # the Chef environment file.
@@ -31,7 +32,7 @@ export BOOTSTRAP_CHEF_DO_CONVERGE=1
 export BOOTSTRAP_HTTP_PROXY=
 export BOOTSTRAP_HTTPS_PROXY=
 
-# Set a location on local disk which contains X509 certificates to add to the system
+# Set a location on local disk which contains X.509 certificates to add to the system
 # CA certificate store in each VM.
 export BOOTSTRAP_ADDITIONAL_CACERTS_DIR=
 

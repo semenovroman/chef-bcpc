@@ -73,7 +73,6 @@ do_on_node bootstrap "$KNIFE cookbook upload apt bcpc chef-client cron logrotate
 # install and bootstrap Chef on cluster nodes
 i=1
 for vm in $vms $mon_vms; do
-  do_on_node $vm "sudo sed -i 's/^source \/usr\/local\/rvm\/scripts\/rvm$//' /etc/profile"
   do_on_node $vm "sudo dpkg -i \$(find /chef-bcpc-files/ -name chef_\*deb -not -name \*downloaded | tail -1)"
   do_on_node bootstrap "$KNIFE bootstrap -x vagrant -P vagrant --sudo 10.0.100.1${i}"
   i=`expr $i + 1`
