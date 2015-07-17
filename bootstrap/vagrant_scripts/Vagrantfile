@@ -79,7 +79,8 @@ end
 case ENV['BOOTSTRAP_VM_PROVIDER']
 when 'vmware'
   ENV['VAGRANT_DEFAULT_PROVIDER'] = (RUBY_PLATFORM.downcase.include? 'darwin') ? 'vmware_fusion' : 'vmware_workstation'
-  $box_url = "#{ENV['BOOTSTRAP_CACHE_DIR']}/vmware_desktop.box"
+  #$box_url = "#{ENV['BOOTSTRAP_CACHE_DIR']}/vmware_desktop.box"
+  $box_url = "/Users/erhudy/Desktop/ubuntu-14-04-x64-vmware.box"
 else
   puts "Provider not set or not supported, defaulting to VirtualBox." unless ENV['BOOTSTRAP_VM_PROVIDER'] == 'virtualbox'
   ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
@@ -174,9 +175,11 @@ unless ENV['BOOTSTRAP_APT_MIRROR'].empty?
   raise BCPCBuildError.new, "#{ENV['BOOTSTRAP_APT_MIRROR']} is an invalid URL, aborting build" if local_mirror_host.nil?
   $repos_script << <<-EOH
     cp /etc/apt/sources.list /etc/apt/sources.list.bak
-    sed -i 's|http://archive\.ubuntu\.com/ubuntu|#{ENV['BOOTSTRAP_APT_MIRROR']}|g' /etc/apt/sources.list
-    sed -i 's|http://security\.ubuntu\.com/ubuntu|#{ENV['BOOTSTRAP_APT_MIRROR']}|g' /etc/apt/sources.list
-    sed -i s/^deb-src/\#deb-src/g /etc/apt/sources.list
+    sed -r -i 's|http://archive\.ubuntu\.com/ubuntu|#{ENV['BOOTSTRAP_APT_MIRROR']}|g' /etc/apt/sources.list
+    sed -r -i 's|http://us\.archive\.ubuntu\.com/ubuntu|#{ENV['BOOTSTRAP_APT_MIRROR']}|g' /etc/apt/sources.list
+    sed -r -i 's|http://security\.ubuntu\.com/ubuntu|#{ENV['BOOTSTRAP_APT_MIRROR']}|g' /etc/apt/sources.list
+    sed -r -i s/^deb-src/\#deb-src/g /etc/apt/sources.list
+    egrep -v '^$|^#' /etc/apt/sources.list | tee /etc/apt/sources.list
     touch /etc/apt/apt.conf
     echo 'Acquire::http::Proxy::#{local_mirror_host} "DIRECT";' | tee -a /etc/apt/apt.conf
   EOH
@@ -193,11 +196,11 @@ EOH
 # (repartionining /dev/sda would be a dreadful chore)
 $add_swap_script = <<-EOH
   #!/bin/bash
-  fallocate -l 8192M /swap
-  chmod 600 /swap
-  mkswap /swap
-  swapon /swap
-  echo '/swap none swap defaults 0 0' | tee -a /etc/fstab
+  fallocate -l 8192M /swap >/dev/null
+  chmod 600 /swap >/dev/null
+  mkswap /swap >/dev/null
+  swapon /swap >/dev/null
+  echo '/swap none swap defaults 0 0' | tee -a /etc/fstab >/dev/null
 EOH
 
 Vagrant.configure("2") do |config|
@@ -282,7 +285,7 @@ Vagrant.configure("2") do |config|
         s.inline = $add_swap_script
       end
 
-      m.vm.box = "trusty64"
+      m.vm.box = "#{ENV['VAGRANT_DEFAULT_PROVIDER']}-trusty64"
       m.vm.box_url = $box_url
 
       if vm == 'bootstrap'
@@ -336,22 +339,6 @@ Vagrant.configure("2") do |config|
           vw.vmx['displayname'] = "bcpc-#{vm}"
           vw.vmx['memsize'] = memory
           vw.vmx['numvcpus'] = cpus
-
-          if (1..3).include?(idx)
-            vmdk_dir = File.join(ENV['VAGRANT_VMWARE_CLONE_DIRECTORY'], 'vm-disks')
-            Dir.mkdir(vmdk_dir) unless Dir.exist?(vmdk_dir)
-
-            ('b'..'e').each_with_index do |disk, disk_idx|
-              vmdk = File.join(vmdk_dir, "#{vm}-#{disk}.vmdk")
-              unless File.exist?(vmdk)
-                `'#{$vdiskmanager}' -c -s #{disk_size}MB -a lsilogic -t 1 #{vmdk}`
-              end
-
-              vw.vmx["scsi0:#{disk_idx+1}.filename"] = vmdk
-              vw.vmx["scsi0:#{disk_idx+1}.present"] = 'TRUE'
-              vw.vmx["scsi0:#{disk_idx+1}.redo"] = ''
-            end # ('b'..'e').each_with_index do |disk, disk_idx|
-          end # if (1..3).include?(idx)
         end # m.vm.provider ENV['VAGRANT_DEFAULT_PROVIDER'].to_sym do |vw|
       end # case ENV['VAGRANT_DEFAULT_PROVIDER']
     end # config.vm.define vm do |machine|
