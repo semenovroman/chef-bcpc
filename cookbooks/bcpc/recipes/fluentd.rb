@@ -63,7 +63,7 @@ if node['bcpc']['enabled']['logging'] then
       elasticsearch-1.0.12
       fluent-plugin-elasticsearch-0.9.0
     }
-  
+
     fluentd_gems.each do |pkg|
       cookbook_file "/tmp/#{pkg}.gem" do
         source "bins/#{pkg}.gem"

@@ -6,4 +6,8 @@ set -e
 
 # Set this to max value to ensure leftover mon VMs are destroyed
 export CLUSTER_NODE_COUNT_OVERRIDE=6
-cd $REPO_ROOT/bootstrap/vagrant_scripts && vagrant destroy -f
+cd $REPO_ROOT/bootstrap/vagrant_scripts
+vagrant destroy -f bootstrap && true
+for vmid in $(seq 1 $CLUSTER_NODE_COUNT_OVERRIDE); do
+  vagrant destroy -f vm$vmid && true
+done

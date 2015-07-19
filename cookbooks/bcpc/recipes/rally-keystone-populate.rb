@@ -22,8 +22,6 @@
 # can function properly since templated backend services in our version of openstack do not support service-* and
 # endpoint-* calls.
 
-rally_user = node['bcpc']['rally']['user']
-
 ruby_block "setup-rally-keystone-config" do
     block do
         make_config('keystone-admin-token', secure_password)
@@ -35,8 +33,8 @@ end
 template "/tmp/keystone_populate.sh" do
     user 'root'
     source "keystone_populate.sh.erb"
-    owner "#{rally_user}"
-    group "#{rally_user}"
+    owner node['bcpc']['rally']['user']
+    group node['bcpc']['rally']['user']
     mode 0755
 end
 
@@ -47,4 +45,3 @@ bash "keystone-populate" do
     EOH
     returns [0, 1]
 end
-

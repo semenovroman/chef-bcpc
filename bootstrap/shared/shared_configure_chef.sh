@@ -50,10 +50,10 @@ if [ $MONITORING_NODES -gt 0 ]; then
   done
 fi
 
-# install the knife-acl plugin into embedded knife, rsync the Chef repository into the non-root user 
+# install the knife-acl plugin into embedded knife, rsync the Chef repository into the non-root user
 # (vagrant)'s home directory, and add the dependency cookbooks from the file cache
-do_on_node bootstrap "sudo /opt/opscode/embedded/bin/gem install $FILECACHE_MOUNT_POINT/knife-acl-0.0.12.gem \
-  && rsync -a $REPO_MOUNT_POINT/* \$HOME/chef-bcpc \
+do_on_node bootstrap "sudo /opt/opscode/embedded/bin/gem install --no-ri --no-rdoc $FILECACHE_MOUNT_POINT/knife-acl-0.0.12.gem \
+  && rsync -a --exclude=".vagrant" $REPO_MOUNT_POINT/* \$HOME/chef-bcpc \
   && cp $FILECACHE_MOUNT_POINT/cookbooks/*.tar.gz \$HOME/chef-bcpc/cookbooks \
   && cd \$HOME/chef-bcpc/cookbooks && ls -1 *.tar.gz | xargs -I% tar xvzf %"
 

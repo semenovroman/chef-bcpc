@@ -11,7 +11,7 @@ echo "|  _ \| |   | |_) | |    "
 echo "| |_) | |___|  __/| |___ "
 echo "|____/ \____|_|    \____|"
 echo
-echo "BCPC Vagrant BootstrapV2 0.2"
+echo "BCPC Vagrant BootstrapV2 0.3"
 echo "--------------------------------------------"
 echo "Bootstrapping local Vagrant environment..."
 
@@ -53,11 +53,12 @@ source $BOOTSTRAP_CONFIG_DEFAULTS
 if [[ -f $BOOTSTRAP_CONFIG_OVERRIDES ]]; then source $BOOTSTRAP_CONFIG_OVERRIDES; fi
 
 # Perform preflight checks to validate environment sanity as much as possible.
-echo "Performing preflight environment validation..."
+echo "Checking for required binaries..."
 source $REPO_ROOT/bootstrap/shared/shared_validate_env.sh
 
 # Test that Vagrant is really installed and of an appropriate version.
-echo "Checking VirtualBox and Vagrant..."
+
+echo "Checking Vagrant..."
 source $REPO_ROOT/bootstrap/vagrant_scripts/vagrant_test.sh
 
 # Configure and test any proxies configured.
@@ -72,7 +73,7 @@ echo "Downloading necessary files to local cache..."
 source $REPO_ROOT/bootstrap/shared/shared_prereqs.sh
 
 # Terminate existing BCPC VMs.
-echo "Shutting down and unregistering VMs from VirtualBox..."
+echo "Shutting down and unregistering VMs from virtualization provider ($BOOTSTRAP_VM_PROVIDER)..."
 #$REPO_ROOT/bootstrap/vagrant_scripts/vagrant_clean.sh
 
 # Create VMs in Vagrant and start them.
