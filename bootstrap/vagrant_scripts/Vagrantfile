@@ -72,12 +72,13 @@ case ENV['BOOTSTRAP_VM_PROVIDER'].downcase
 when 'vmware'
   ENV['VAGRANT_DEFAULT_PROVIDER'] = (RUBY_PLATFORM.downcase.include? 'darwin') ? 'vmware_fusion' : 'vmware_workstation'
 else
-  puts "Provider not set or not supported, defaulting to VirtualBox." unless ENV['BOOTSTRAP_VM_PROVIDER'] == 'virtualbox'
+  puts "Provider not set or not supported, defaulting to VirtualBox." unless ENV['BOOTSTRAP_VM_PROVIDER'].downcase == 'virtualbox'
   ENV['VAGRANT_DEFAULT_PROVIDER'] = 'virtualbox'
 end
 
-# TODO CHANGE THIS (obviously)
-$box_url = "/Users/erhudy/Desktop/bcpc-ubuntu1404-#{ENV['BOOTSTRAP_VM_PROVIDER'].downcase}.box"
+# TODO CHANGE THIS TO NOT USE MY PRIVATE ATLAS ACCOUNT
+$box_name = "erhudy/ubuntu-1404"
+$box_url = "https://atlas.hashicorp.com/#{$box_name}"
 
 # list any package names to be automatically removed here
 $packages_to_remove = []
@@ -216,7 +217,7 @@ Vagrant.configure("2") do |config|
       final_octet = (vm == 'bootstrap' ? 3 : 10+idx)
       bootstrap_domain = (ENV['BCPC_HYPERVISOR_DOMAIN'] or "hypervisor-bcpc.example.com")
       m.vm.hostname = "bcpc-#{vm}.#{bootstrap_domain}"
-      m.vm.box = "bcpc-ubuntu1404-#{ENV['VAGRANT_DEFAULT_PROVIDER']}"
+      m.vm.box = $box_name
       m.vm.box_url = $box_url
 
       m.vm.network :private_network, ip: "10.0.100.#{final_octet}", netmask: "255.255.255.0", adapter_ip: "10.0.100.2"
