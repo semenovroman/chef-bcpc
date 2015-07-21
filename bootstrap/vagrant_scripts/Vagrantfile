@@ -168,7 +168,7 @@ unless ENV['BOOTSTRAP_APT_MIRROR'].empty?
     sed -r -i s/^deb-src/\#deb-src/g /etc/apt/sources.list
     egrep -v '^$|^#' /etc/apt/sources.list | tee /etc/apt/sources.list >/dev/null
     touch /etc/apt/apt.conf
-    echo 'Acquire::http::Proxy::#{local_mirror_host} "DIRECT";' | tee -a /etc/apt/apt.conf
+    echo 'Acquire::http::Proxy::#{local_mirror_host} "DIRECT";' | tee -a /etc/apt/apt.conf >/dev/null
   EOH
 end
 
