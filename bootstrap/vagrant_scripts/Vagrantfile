@@ -54,8 +54,8 @@ end
 
 # test required environment variables after config import
 %w{
+  BCPC_HYPERVISOR_DOMAIN
   BOOTSTRAP_CACHE_DIR
-  BOOTSTRAP_DOMAIN
   BOOTSTRAP_VM_CPUS
   BOOTSTRAP_VM_MEM
   CLUSTER_VM_CPUS
@@ -65,7 +65,7 @@ end
   REPO_MOUNT_POINT
   REPO_ROOT
 }.each do |v|
-  raise BCPCBuildError.new, "#{x} must be set in the environment. Please check your bootstrap configuration." if ENV[v].empty?
+  raise BCPCBuildError.new, "#{v} must be set in the environment. Please check your bootstrap configuration." if ENV[v].empty?
 end
 
 case ENV['BOOTSTRAP_VM_PROVIDER'].downcase
