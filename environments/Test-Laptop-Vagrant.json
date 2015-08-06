@@ -3,9 +3,7 @@
   "override_attributes": {
     "bcpc": {
       "use_bootstrap_v2": true,
-      "vagrant": {
-        "nat_ip": "10.0.2.15"
-      },
+      "vagrant": true,
       "virt_type" : "qemu",
       "enabled": {
         "logging": true,
@@ -24,7 +22,8 @@
         "ram_allocation_ratio" : "20.0",
         "cpu_allocation_ratio": "20.0"
       },
-      "domain_name" : "bcpc.example.com",
+      "cluster_domain" : "bcpc.example.com",
+      "hypervisor_domain": "hypervisor-bcpc.example.com",
       "management": {
         "vip" : "10.0.100.5",
         "interface" : "eth1",
@@ -56,7 +55,10 @@
         "dhcp_subnet" : "10.0.100.0",
         "dhcp_range" : "10.0.100.14 10.0.100.250"
       },
-      "dns_servers" : [ "8.8.8.8", "8.8.4.4" ]
+      "dns_servers" : [ "8.8.8.8", "8.8.4.4" ],
+      "rally": {
+        "user": "vagrant"
+      }
     },
     "ntp": {
       "servers" : [ "0.pool.ntp.org", "1.pool.ntp.org", "2.pool.ntp.org", "3.pool.ntp.org" ]
