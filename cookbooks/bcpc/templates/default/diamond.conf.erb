@@ -210,6 +210,16 @@ enabled = True
 enabled = False
 <% end -%>
 
+[[BC2Collector]]
+enabled = True
+interval = 900
+path = openstack
+path_prefix = BC2
+hostname = <%=node['bcpc']['region_name']%>
+db_user = <%=get_config('mysql-root-user')%>
+db_password = <%=get_config('mysql-root-password')%>
+db_host = <%=node['bcpc']['management']['ip']%>
+
 <% if @servers.include?(node) -%>
 [[HAProxyCollector]]
 enabled = False
@@ -274,4 +284,3 @@ args = ('/var/log/diamond/diamond.log', 'midnight', 1, 7)
 
 format = [%(asctime)s] [%(threadName)s] %(message)s
 datefmt =
-

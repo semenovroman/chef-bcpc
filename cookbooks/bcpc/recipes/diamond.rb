@@ -90,6 +90,24 @@ if node['bcpc']['enabled']['metrics'] then
         only_if "test -f /etc/init.d/elasticsearch"
     end
 
+    # required by diamond openstack collector
+    package "python-mysql.connector" do
+        action :upgrade
+    end
+
+    directory '/usr/share/diamond/collectors/BC2/' do
+        owner 'root'
+        group 'root'
+        mode '0755'
+        action :create
+    end
+
+    cookbook_file "/usr/share/diamond/collectors/BC2/BC2.py" do
+        source "diamond-collector-BC2-openstack.py"
+        owner "root"
+        mode 00644
+    end
+
     service "diamond" do
         action [:enable, :start]
     end
