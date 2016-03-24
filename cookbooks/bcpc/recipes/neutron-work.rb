@@ -73,12 +73,14 @@ end
 #  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
 #end
 
-service 'neutron-dhcp-agent' do
-  action [:enable, :start]
-  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
-  subscribes :restart, "template[/etc/neutron/dhcp_agent.ini]", :delayed
-  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
-end
+# calico-dhcp-agent is used instead
+# but installing neutron-dhcp-agent is still required
+#service 'neutron-dhcp-agent' do
+#  action [:enable, :start]
+#  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
+#  subscribes :restart, "template[/etc/neutron/dhcp_agent.ini]", :delayed
+#  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
+#end
 
 #service 'neutron-l3-agent' do
 #  action [:enable, :start]

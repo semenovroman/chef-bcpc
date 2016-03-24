@@ -51,7 +51,6 @@ bash "etcd-data-dir" do
   # not_if "grep '/var/lib/etcd' /etc/fstab"
 end
 
-# /etc/init/etcd.conf
 template "/etc/init/etcd.conf" do
     source "etcd.conf.erb"
     owner "root"
@@ -74,45 +73,28 @@ package "dnsmasq-utils" do
     action :upgrade
 end
 
-# I think this is a no-op
-#package "neutron-common" do
-#    action :upgrade
-#end
+# might need to do this:
+#sudo service neutron-dhcp-agent stop
+#echo manual | sudo tee /etc/init/neutron-dhcp-agent.override
 
-# this is temporary hack to make Calico work
-# package "python-pip" do
-#    action :upgrade
-#end
+bash "disable-neutron-dhcp-agent" do
+    code "echo manual | tee /etc/init/neutron-dhcp-agent.override"
+end
 
-# must install without dependencies
-# otherwise it installs pbr version that breaks keystone
-#bash "install-networking-calico" do
-#    code "pip install --no-deps networking-calico"
-#end
+# service neutron-dhcp-agent stop
+bash "stop-neutron-dhcp-agent" do
+   code "service neutron-dhcp-agent stop"
+   ignore_failure true
+end
 
-#cookbook_file "/tmp/networking-calico-1.0.0.tar.gz" do
-#    source "networking-calico-1.0.0.tar.gz"
-#    owner "root"
-#    mode 00644
-#end
-
-#bash "install-networking-calico" do
-#    code "pip install --no-deps --no-index --find-links file:///tmp/ networking-calico"
-#end
-
-
-package "neutron-dhcp-agent" do
+package "calico-dhcp-agent" do
     action :upgrade
 end
 
-#package "neutron-api-metadata" do
-#    action :upgrade
-#end
-
-# service neutron-dhcp-agent stop
-#bash "stop-neutron-dhcp-agent" do
-#   code "service neutron-dhcp-agent stop"
-#end
+bash "start-calico-dhcp-agent" do
+    code "service calico-dhcp-agent start"
+    ignore_failure true
+end
 
 package "calico-compute" do
     action :upgrade

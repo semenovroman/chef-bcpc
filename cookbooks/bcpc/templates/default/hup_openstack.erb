@@ -32,9 +32,7 @@ for i in nova-api \
          nova-compute \
          nova-network \
          nova-novncproxy \
-         neutron-plugin-linuxbridge-agent \
-         neutron-dhcp-agent \
-         neutron-l3-agent \
+         calico-dhcp-agent \
          neutron-metadata-agent
 do
     service $i restart

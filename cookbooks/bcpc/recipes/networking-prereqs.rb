@@ -139,21 +139,21 @@ if node['bcpc']['enabled']['neutron']
 
   # for Neutron, configure eth4 as a manual interface (so that it can be up but
   # does not get an address)
-  template "/etc/network/interfaces.d/iface-eth4.cfg" do
-    source "network.iface.erb"
-    owner "root"
-    group "root"
-    mode 00644
-    variables(
-      :interface => 'eth4',
-      :type => 'manual',
-      :mtu => node['bcpc']['floating']['mtu'],
-    )
-  end
+  #template "/etc/network/interfaces.d/iface-eth4.cfg" do
+#    source "network.iface.erb"
+#    owner "root"
+#    group "root"
+#    mode 00644
+#    variables(
+#      :interface => 'eth4',
+#      :type => 'manual',
+#      :mtu => node['bcpc']['floating']['mtu'],
+#    )
+#  end
 
-  bash 'ifup-eth4' do
-    code 'ifup eth4'
-  end
+#  bash 'ifup-eth4' do
+#    code 'ifup eth4'
+#  end
 else
   [['management', 100], ['storage', 300]].each do |net, metric|
     template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface']}.cfg" do
