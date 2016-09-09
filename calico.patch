@@ -1,0 +1,5005 @@
+diff --git a/bootstrap/shared/shared_configure_chef.sh b/bootstrap/shared/shared_configure_chef.sh
+index 5866f3a..c21f9c6 100755
+--- a/bootstrap/shared/shared_configure_chef.sh
++++ b/bootstrap/shared/shared_configure_chef.sh
+@@ -62,10 +62,10 @@ fi
+ 
+ # install the knife-acl plugin into embedded knife, rsync the Chef repository into the non-root user
+ # (vagrant)'s home directory, and add the dependency cookbooks from the file cache
+-do_on_node vm-bootstrap "sudo /opt/opscode/embedded/bin/gem install $FILECACHE_MOUNT_POINT/knife-acl-0.0.12.gem \
+-  && rsync -a $REPO_MOUNT_POINT/* \$HOME/chef-bcpc \
+-  && cp $FILECACHE_MOUNT_POINT/cookbooks/*.tar.gz \$HOME/chef-bcpc/cookbooks \
+-  && cd \$HOME/chef-bcpc/cookbooks && ls -1 *.tar.gz | xargs -I% tar xvzf %"
++do_on_node vm-bootstrap "sudo /opt/opscode/embedded/bin/gem install $FILECACHE_MOUNT_POINT/knife-acl-1.0.2.gem \
++    && rsync -a $REPO_MOUNT_POINT/* \$HOME/chef-bcpc \
++    && cp $FILECACHE_MOUNT_POINT/cookbooks/*.tar.gz \$HOME/chef-bcpc/cookbooks \
++    && cd \$HOME/chef-bcpc/cookbooks && ls -1 *.tar.gz | xargs -I% tar xvzf %"
+ 
+ # build binaries before uploading the bcpc cookbook
+ # (this step will change later but using the existing build_bins script for now)
+@@ -106,9 +106,10 @@ do_on_node vm-bootstrap "$KNIFE node run_list set bcpc-vm-bootstrap.$BCPC_HYPERV
+   && $KNIFE node run_list set bcpc-vm3.$BCPC_HYPERVISOR_DOMAIN 'role[BCPC-Hardware-Virtual],role[BCPC-EphemeralWorknode]'"
+ 
+ # generate actor map and set bootstrap, vm1 and mon vms (if any) as admins so that they can write into the data bag
+-ADMIN_SET="cd \$HOME && $KNIFE actor map && "
++# set bootstrap, vm1 and mon vms (if any) as admins so that they can write into the data bag
++ADMIN_SET="true && "
+ for vm in vm-bootstrap vm1 $mon_vms; do
+-  ADMIN_SET="$ADMIN_SET $KNIFE group add actor admins bcpc-$vm.$BCPC_HYPERVISOR_DOMAIN && "
++  ADMIN_SET="$ADMIN_SET $KNIFE group add client bcpc-$vm.$BCPC_HYPERVISOR_DOMAIN admins && "
+ done
+ ADMIN_SET="$ADMIN_SET :"
+ do_on_node vm-bootstrap $ADMIN_SET
+diff --git a/bootstrap/shared/shared_prereqs.sh b/bootstrap/shared/shared_prereqs.sh
+index c8ec8aa..d039e19 100755
+--- a/bootstrap/shared/shared_prereqs.sh
++++ b/bootstrap/shared/shared_prereqs.sh
+@@ -44,24 +44,26 @@ BOX=trusty-server-cloudimg-amd64-vagrant-disk1.box
+ download_file $BOX http://cloud-images.ubuntu.com/vagrant/trusty/current/$BOX
+ 
+ # Obtain Chef client and server DEBs.
+-CHEF_CLIENT_DEB=${CHEF_CLIENT_DEB:-chef_12.3.0-1_amd64.deb}
+-CHEF_SERVER_DEB=${CHEF_SERVER_DEB:-chef-server-core_12.0.8-1_amd64.deb}
+-download_file $CHEF_CLIENT_DEB https://opscode-omnibus-packages.s3.amazonaws.com/ubuntu/10.04/x86_64/$CHEF_CLIENT_DEB
+-download_file $CHEF_SERVER_DEB https://web-dl.packagecloud.io/chef/stable/packages/ubuntu/trusty/$CHEF_SERVER_DEB
++CHEF_CLIENT_DEB=${CHEF_CLIENT_DEB:-chef_12.9.41-1_amd64.deb}
++CHEF_SERVER_DEB=${CHEF_SERVER_DEB:-chef-server-core_12.6.0-1_amd64.deb}
++download_file $CHEF_CLIENT_DEB https://packages.chef.io/stable/ubuntu/10.04/$CHEF_CLIENT_DEB
++download_file $CHEF_SERVER_DEB https://packages.chef.io/stable/ubuntu/14.04/$CHEF_SERVER_DEB
+ 
+ # Pull needed cookbooks from the Chef Supermarket.
+ mkdir -p $BOOTSTRAP_CACHE_DIR/cookbooks
+-download_file cookbooks/apt-1.10.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/apt/versions/1.10.0/download
+-download_file cookbooks/cron-1.6.1.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/cron/versions/1.6.1/download
+-download_file cookbooks/logrotate-1.6.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/logrotate/versions/1.6.0/download
+-download_file cookbooks/ntp-1.8.6.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/ntp/versions/1.8.6/download
+-download_file cookbooks/ubuntu-1.1.8.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/ubuntu/versions/1.1.8/download
+-download_file cookbooks/yum-3.2.2.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/yum/versions/3.2.2/download
++download_file cookbooks/apt-3.0.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/apt/versions/3.0.0/download
++download_file cookbooks/cron-1.7.6.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/cron/versions/1.7.6/download
++download_file cookbooks/logrotate-1.9.2.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/logrotate/versions/1.9.2/download
++download_file cookbooks/ntp-2.0.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/ntp/versions/2.0.0/download
++download_file cookbooks/ubuntu-1.2.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/ubuntu/versions/1.2.0/download
++download_file cookbooks/yum-3.10.0.tar.gz http://cookbooks.opscode.com/api/v1/cookbooks/yum/versions/3.10.0/download
+ download_file cookbooks/hostsfile-2.4.5.tar.gz https://supermarket.chef.io/api/v1/cookbooks/hostsfile/versions/2.4.5/download
+-download_file cookbooks/concat-0.3.0.tar.gz https://supermarket.chef.io/api/v1/cookbooks/concat/versions/0.3.0/download
++download_file cookbooks/concat-0.3.3.tar.gz https://supermarket.chef.io/api/v1/cookbooks/concat/versions/0.3.3/download
++download_file cookbooks/windows-1.40.0.tar.gz https://supermarket.chef.io/api/v1/cookbooks/windows/versions/1.40.0/download
++download_file cookbooks/chef-handler-1.4.0.tar.gz https://supermarket.chef.io/api/v1/cookbooks/chef_handler/versions/1.4.0/download
+ 
+ # Pull knife-acl gem.
+-download_file knife-acl-0.0.12.gem https://rubygems.global.ssl.fastly.net/gems/knife-acl-0.0.12.gem
++download_file knife-acl-1.0.2.gem https://rubygems.global.ssl.fastly.net/gems/knife-acl-1.0.2.gem
+ 
+ # Pull needed gems for fpm.
+ GEMS=( arr-pm-0.0.10 backports-3.6.4 cabin-0.7.1 childprocess-0.5.6 clamp-0.6.5 ffi-1.9.8
+diff --git a/bootstrap/vagrant_scripts/Vagrantfile b/bootstrap/vagrant_scripts/Vagrantfile
+index c93508d..48b63ce 100644
+--- a/bootstrap/vagrant_scripts/Vagrantfile
++++ b/bootstrap/vagrant_scripts/Vagrantfile
+@@ -199,6 +199,8 @@ Vagrant.configure("2") do |config|
+       m.vm.network :private_network, ip: "10.0.100.#{final_octet}", netmask: "255.255.255.0", adapter_ip: "10.0.100.2"
+       m.vm.network :private_network, ip: "172.16.100.#{final_octet}", netmask: "255.255.255.0", adapter_ip: "172.16.100.2"
+       m.vm.network :private_network, ip: "192.168.100.#{final_octet}", netmask: "255.255.255.0", adapter_ip: "192.168.100.2"
++      m.vm.network :private_network, ip: "192.168.101.#{final_octet}", auto_config: false
++      
+       if ENV['REPO_ROOT'].nil? or ENV['REPO_MOUNT_POINT'].nil?
+         fail "REPO_ROOT and REPO_MOUNT_POINT must be set in the environment."
+       end
+diff --git a/cookbooks/bcpc/attributes/default.rb b/cookbooks/bcpc/attributes/default.rb
+index e00c7dc..32137ba 100644
+--- a/cookbooks/bcpc/attributes/default.rb
++++ b/cookbooks/bcpc/attributes/default.rb
+@@ -7,7 +7,7 @@ default['bcpc']['country'] = "US"
+ default['bcpc']['state'] = "NY"
+ default['bcpc']['location'] = "New York"
+ default['bcpc']['organization'] = "Bloomberg"
+-default['bcpc']['openstack_release'] = "kilo"
++default['bcpc']['openstack_release'] = "liberty"
+ # Can be "updates" or "proposed"
+ default['bcpc']['openstack_branch'] = "proposed"
+ # Should be kvm (or qemu if testing in VMs that don't support VT-x)
+@@ -48,7 +48,8 @@ default['bcpc']['enabled']['monitoring'] = true
+ # This will enable powerdns on head nodes
+ default['bcpc']['enabled']['dns'] = true
+ # This will enable iptables firewall on all nodes
+-default['bcpc']['enabled']['host_firewall'] = true
++# TODO: make this work with Calico
++default['bcpc']['enabled']['host_firewall'] = false
+ # This will enable of encryption of the chef data bag
+ default['bcpc']['enabled']['encrypt_data_bag'] = false
+ # These will enable automatic dist-upgrade/upgrade at the start of a Chef run
+@@ -69,6 +70,8 @@ default['bcpc']['enabled']['secure_fixed_networks'] = true
+ default['bcpc']['enabled']['swap'] = true
+ # Toggle to enable/disable Heat (OpenStack Cloud Formation)
+ default['bcpc']['enabled']['heat'] = false
++# Toggle to switch between Neutron and Nova networking
++default['bcpc']['enabled']['neutron'] = true
+ 
+ ###########################################
+ #
+@@ -112,11 +115,12 @@ default['bcpc']['management']['interface-parent'] = nil
+ # list of TCP ports that should be open on the management interface
+ # (generally stuff served via HAProxy)
+ default['bcpc']['management']['firewall_tcp_ports'] = [
+-  80,443,8088,7480,5000,35357,9292,8776,8773,8774,8004,8000,8777,6080
++  80,443,8088,7480,5000,35357,9292,8776,8773,8774,8004,8000,8777,6080,9696
+ ]
+ 
+ default['bcpc']['metadata']['ip'] = "169.254.169.254"
+ 
++default['bcpc']['storage']['vip'] = "100.100.0.5"
+ default['bcpc']['storage']['netmask'] = "255.255.255.0"
+ default['bcpc']['storage']['cidr'] = "100.100.0.0/24"
+ default['bcpc']['storage']['gateway'] = "100.100.0.1"
+@@ -165,6 +169,8 @@ default['bcpc']['repos']['kibana'] = "http://packages.elasticsearch.org/kibana/4
+ default['bcpc']['repos']['erlang'] = "http://packages.erlang-solutions.com/ubuntu"
+ default['bcpc']['repos']['ceph'] = "http://download.ceph.com/debian-hammer"
+ default['bcpc']['repos']['zabbix'] = "http://repo.zabbix.com/zabbix/2.4/ubuntu"
++default['bcpc']['repos']['calico'] = "http://ppa.launchpad.net/project-calico/calico-1.4/ubuntu"
++default['bcpc']['repos']['bird'] = "http://ppa.launchpad.net/cz.nic-labs/bird/ubuntu"
+ 
+ ###########################################
+ #
+@@ -195,6 +201,7 @@ default['bcpc']['dbname']['cinder'] = "cinder"
+ default['bcpc']['dbname']['glance'] = "glance"
+ default['bcpc']['dbname']['horizon'] = "horizon"
+ default['bcpc']['dbname']['keystone'] = "keystone"
++default['bcpc']['dbname']['neutron'] = "neutron"
+ default['bcpc']['dbname']['heat'] = "heat"
+ default['bcpc']['dbname']['ceilometer'] = "ceilometer"
+ default['bcpc']['dbname']['graphite'] = "graphite"
+@@ -220,6 +227,7 @@ default['bcpc']['protocol']['keystone'] = "https"
+ default['bcpc']['protocol']['glance'] = "https"
+ default['bcpc']['protocol']['nova'] = "https"
+ default['bcpc']['protocol']['cinder'] = "https"
++default['bcpc']['protocol']['neutron'] = "https"
+ default['bcpc']['protocol']['heat'] = "https"
+ 
+ 
+@@ -352,6 +360,7 @@ default['bcpc']['nova']['quota'] = {
+ ###########################################
+ # Verbose logging (level INFO)
+ default['bcpc']['cinder']['verbose'] = false
++default['bcpc']['cinder']['debug'] = false
+ default['bcpc']['cinder']['workers'] = 5
+ default['bcpc']['cinder']['allow_az_fallback'] = true
+ default['bcpc']['cinder']['rbd_flatten_volume_from_snapshot'] = true
+@@ -360,8 +369,7 @@ default['bcpc']['cinder']['rbd_flatten_volume_from_snapshot'] = true
+ default['bcpc']['cinder']['rbd_max_clone_depth'] = 5
+ default['bcpc']['cinder']['quota'] = {
+   "volumes" => -1,
+-  "quota_snapshots" => 10,
+-  "consistencygroups" => 10,
++  "snapshots" => 10,
+   "gigabytes" => 1000
+ }
+ 
+@@ -571,4 +579,4 @@ default['bcpc']['getty']['ttys'] = %w( ttyS0 ttyS1 )
+ #
+ # VNC uses cluster domain name by default
+ # for proxy base url. Set to 'true' to use vip
+-default['bcpc']['vnc']['proxy_use_vip'] = false
++default['bcpc']['vnc']['proxy_use_vip'] = true
+diff --git a/cookbooks/bcpc/files/default/bird-release.key b/cookbooks/bcpc/files/default/bird-release.key
+new file mode 100644
+index 0000000..df7c9b7
+--- /dev/null
++++ b/cookbooks/bcpc/files/default/bird-release.key
+@@ -0,0 +1,13 @@
++-----BEGIN PGP PUBLIC KEY BLOCK-----
++Version: SKS 1.1.5
++Comment: Hostname: keyserver.ubuntu.com
++
++mI0ETIeANwEEANdjpXTkGAlA4bu87Cj2B2+ZSanxRD/13yOAassyh0aF3KXbR/39aWZSt2WL
++13TwJ1qG0+83A46vcrbU1KqTaIteF0AAPUMsRJQPccsxyPZfMdW8pIy50G4lwSHxbCizOOh1
++IGDUnskCfOl8iZ6yajBI2S8Fvh8ERhxbXUoMZ8JnABEBAAG0G0xhdW5jaHBhZCBEYXRvdsOp
++IHNjaHLDoW5reYi1BBMBAgAgBQJMh4A3AhsDBgsJCAcDAgQVAggDBBYCAwECHgECF4AACgkQ
++8jMSOPnFmkWqCgP4nMyuTUSJtRYMR1MFvgISz+woBx6n2AFdExtO4ujUpolLW2ghuHqyh9lA
++6t+8kgoFteWEzRoHfJIQqeXtEt6LcDWlE+gGF6Mw7x1RXsbrnBFZxWFqbyHQDKLmDMeVwP6m
++EdiLXtVPtyikPQRnBlEwzV4rReQnVnPimR8rYGnt/g==
++=JfA0
++-----END PGP PUBLIC KEY BLOCK-----
+diff --git a/cookbooks/bcpc/files/default/calico-release.key b/cookbooks/bcpc/files/default/calico-release.key
+new file mode 100644
+index 0000000..2f3510e
+--- /dev/null
++++ b/cookbooks/bcpc/files/default/calico-release.key
+@@ -0,0 +1,27 @@
++-----BEGIN PGP PUBLIC KEY BLOCK-----
++Version: SKS 1.1.5
++Comment: Hostname: keyserver.ubuntu.com
++
++mQINBFTSBSMBEADd6a15lM0MjFC1yy4P0aojjLc/3w3UtZ9Dfp/YMvmNDH9nWeXhOv3ltkSq
++GUYtemLVBjF5IYTwRwv0yShKueiLzKOnC2le2eCDK675ZSOc5kuwZSBB4oxxQKChWtRcAGQD
++HKLBNFdLMFa1fnqeW7dpKKKk9l2u90T/x0mxSUNjpx59gXZ3AX9CVRnbvhCjnyYtuarldE5O
++MLjjmYes9cRDXs/D+XuDZMr8tgComv0dcw3PqzRaq9QJlKhX1fuzMypS/A2A2gndPztswrKn
++SBMKUSlLetNYZmWRV1D7KA2Waz5P1o/Csl3d/nZZrv0Xw6s8TarI9hplyph7GH7WAfYGWxpL
++hqWX0/S5qYRndIULQUnZDowjlN8bX/R8AwCsgIyFORK3C8V2hfq04bHtXg0gI4R0j4wCnDo5
++k6q4WBqrGcYO6qjAJrfUsfQFGaUSYVGvJtIzAh9Fa9Ms5h1FSJuqQHPkF6N+LpAAM96rftIw
++FzeKrLVSZttC+zIvwbcz2nio909LUYe3RZTLqxoWjWmoBEIJHxcS4Zp0eD72gckV/IIcUx8e
++uZDi2PWS7DMkjarc/esSQi0jj1k9npLKnV6J5FJ8ntAisAjTUjNqJ4n8bVoA357cvjS7Toqp
++HKCGJpMdJZSRrbtfsRKmhq8ejESskBhxwzZ7gJhq5K9hHjgO2QARAQABtCBMYXVuY2hwYWQg
++UFBBIGZvciBQcm9qZWN0IENhbGljb4kCOAQTAQIAIgUCVNIFIwIbAwYLCQgHAwIGFQgCCQoL
++BBYCAwECHgECF4AACgkQZ9fjWz1ApqfzqRAA2oUWNQOdxMqWGGmxt9Oh6Pce5U4Zk8c8bvDr
++aMPwuT4efSKiqjgKHYV0jvOcRBlEGmfIFRMzEaN83ESDArwK7NBF+8JuHpAwSJ6aScPBEQgM
++w7Yh2ZkPIcmFQsST1oDlOSa3h4k1OUKkvkUx0xUBvuB4vWoXpUP43M59EDXU7pqK33OT0rOM
++EFquO6qvJUrD/dsCRqO6y2ZkbEkuNLTBkYknrhESEsigFgvcAtxRjHdtZR73zsYQfYPb4Ol+
++wHZbRy/Ww2dqx+yYxym59PDXZCqZ4d0T1RW/7V0bGngOVUxyDsNNsnSsOiYLb+IIL5XNKeIk
++wIWeZR84M/D11KQMzaqOqXCuna0cHKU7MKfYleOJ7xYjTJ4B5H/Nj2wtAx68ZlEWjTiTf0E9
++nulWilHZ447/HSiE2tBYw6777VacHjRgNRtb2Fj+Ia95sUQOZQ3no8veA4egRPBqk78hZ0ke
++3fPJ7tKmODX6u2wSe6v1jQhvF98ekK3bhenZnDAt0jQsbkX9aoiX1bwAbeT+7BwxE4c4/joX
++TUePclAtLE2R5ExLB/F9okeU9CX9amt9swtsCDo9b2dY1OWSMMM5DXr6tl6Lp8jXwpYLTiaU
++ZIUkjPT/acUFEBHpXOYMA2aX5TStf4y1uf5FJ9zo5Xk2hmoIblfY99rszbthKoXRP1SN5Js=
++=WSky
++-----END PGP PUBLIC KEY BLOCK-----
+diff --git a/cookbooks/bcpc/files/default/rabbitmq.key b/cookbooks/bcpc/files/default/rabbitmq.key
+index 7195cf7..9171461 100644
+--- a/cookbooks/bcpc/files/default/rabbitmq.key
++++ b/cookbooks/bcpc/files/default/rabbitmq.key
+@@ -1,30 +1,52 @@
+ -----BEGIN PGP PUBLIC KEY BLOCK-----
+-Version: GnuPG v1.4.6 (GNU/Linux)
+ 
+-mQGiBEaOQ/IRBACs/n609zN+OzlK9qDkFWwYKfPG+BlgqBj5MSy0XE2K8cE3bWSV
+-2WftTe/TGEfW0hknXt1PyBla0cnO9Up1xCn142vo8bvUug8WjrxLQBBiAf11FAOR
+-dt9roGe4IWw/Lakgb88re09ZYKmOL9H7MEpvMqtjdWjFSq4zeeGa8rGEswCgnQLb
+-ZD/MNlUNQwQVCs+vVRdgpzcD+QELSc2EeYl4tef0NiUaZQt+mjFTs3DjQNDTjXao
+-ETVAqECx4kavcshx5tSE5JbbQPIMiUgh0h9J3z3uZsBVnx6P82aW/QTw+jLhsQry
+-/i3Z/+pS66mk6EWhAAYF/SPVqM/06BZh0ZvUmeG9WGGJXD9CUN1Wfi2mt42L2zhT
+-xg3uBACoIs5/GORi0H2i+blLiFSxTroXw+TdxiP+mfjdPho0oXJQTljXBgG70VfX
+-XW9sWsYtekqXBsmwMcbCZTjZGul/8jAUlUoYfthRw9KpP9N8Q7wB8Flx9jEv0M0H
+-tV1KTrLuXNZvEAB1sECMa7RRrV1yO4wyYDsOXiZNTL6rYugOU7QwUmFiYml0TVEg
+-UmVsZWFzZSBTaWduaW5nIEtleSA8aW5mb0ByYWJiaXRtcS5jb20+iGAEExECACAF
+-AkaOQ/ICGwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAAKCRD3uM6mBW6OVkymAJ0R
+-6MwiZNRuTAttgYf1Xe7dK7HpzACfZioV/LqnDh7XvcTJEl+r4GB19by5Ag0ERo5D
+-+xAIAKu1ZxtAZjwlNLb0L5uwrEP7nTbRTNUYoEtE8+CNDSLLlmRIvBriKYNGicnz
+-Ebq2kDnAoyH38ACIMNayrkqc6I4l3BD2sv7zPZCd4qAbyFCu6gnewTANTWkVuH60
+-R65QQ8pM8sM+VZAMSoMkDSP4u248xOzFyGgVYuuWuR/sIRcaA02FW9TGvZQ7fNoF
+-rf6UbKSYkjpY767IW8q0b68vKzSLw0GQvH+dsvhaj80hjKJ06+IZ9Gdi/b4+AIT2
+-YWyWmrHo2QhnUmsarNdtusesQGQtiYgZw95PJJkzR0AttuPPfPNGLYZtVJenvOCC
+-jsK5uUL3/eEQ3UWGs+BKEyA/qLMAAwUH/2kIFCdgCw2DnL87TO+vruhGjsM7NjXf
+-57F4ojTdblFd6AerjRhMgICdzCF9WkFROdBSyQ/GajoNU81kbHZglxmKyKkVwWEb
+-G7pmSIc/sk5Z7OP/zrg4h8ZGzvMbRy0XLf86lQhbDE3AcHMeJCcShIWAHAbygnYW
+-j0KRhZiyqxqx4mrZQDZEWI7S1G9YNvgu1GS9EEKEpmxDEOME9nJZLi9o7mTeD1QV
+-TyOzWHkpQ42QcgrFuG7RMxDaQK6bdinNTl8aPmMoPamGzotSt4aMoVMiNxjatnlH
+-pqQ5UJlqbB5FGLnwJ0773WzgRdxIwSIxkFhL/Mq4agf4an8151kqcZCISQQYEQIA
+-CQUCRo5D+wIbDAAKCRD3uM6mBW6OVhLmAKCYY152B/10n7aUNKejs92NsNAnPACf
+-ZwbDOKBXGfkCPuRx5j/AGneASNU=
+-=Ry+c
++mQINBFc6394BEACzae+l1pU31AMhJrRx4BqYv8ZCVUBOeiS3xIcgme1Oq2HSq/Vt
++x49VPU9xY9ni4GjOU9c9/J9/esuigbctCN7CdR8bqN/srwqmuIPNIS/MvGhNimjO
++/EUKcZtmJ5fnFk08bzjkyS/ScEzf3jdJadrercoPpbAKWnzCUblX8AdFDyDJhl65
++TlSKS9+Sz0tfSdUIa0LpyJHZmLQ4chCy6KbDUAvchM2xUTIEJwx+sL4n/J6yYkZl
++L90mVi4QEYl1Cajioeg9zxduoUmXq0SR5gQe6VIaXYrIk2gOEMNQL4P/4CKEn9No
++1yvUP1+dSYTyvbmF+1pr16xPyNpw3ydmxDX9VxZAEnzPabB8Uortirtt0Dpopufy
++TJR99dPcKV+BWJtQF6xD30kj8LaDfhyVeB6Bo+L0hhhvnZYWkps8ZJ1swcoBjir7
++RDq8hJVqu8YHrzsiFL5Ut/pRkNhrK83GVOxnTndmj/MNboExD3IR/yjCiWNxC9Zu
++Iaedv2ux+0KrQVTDU7I97x2GDwyiUMnKL7IKWSOTDR4osv5RlJzAovuv2+lZ8sle
++ZvCEWOGeEYYM1VLDgXhPQdMwyizJ113oobxbqF+InlWq/T9mWmJDLb4wAiha3KKE
++XJi8wXkJMdRQ0ftM1zKD8qBMukyVndZ6yNQrx3uHAP/Yl2XKPUbtkq/KVQARAQAB
++tDBSYWJiaXRNUSBSZWxlYXNlIFNpZ25pbmcgS2V5IDxpbmZvQHJhYmJpdG1xLmNv
++bT6JAjcEEwEKACEFAlc6394CGwMFCwkIBwMFFQoJCAsFFgIDAQACHgECF4AACgkQ
++a3OjbmAm38qiJQ/+PkS0I+Be1jQINT2F4f8Mwq4Zxcqm4whbg6DH6zkvvqSqXFNB
++wg7HVsC3qQ9Uh6OPw3dziBHmsOE50DpeqCGjHGacJ/Az/00PHKUn8eJQ/dIB1rla
++PcSOBUP2CrMLLh9PbP1ZDm2/6gpInyYIRQox8k7j5PnHSVprYAA6tp/11i351WOQ
++WkuN54482svVRfUEttt0NPLXtXJQl4V1eBt8+J11ZSh0mq2QSTxg211YBY0ugeVx
++Q0PBIWvrNmcsnBttj5MJ/4L9nFmuemiSS3M9ONjwDBxaiaWCwxFwKXGensNOWeZy
++bBfbhQxTpOKSNgyk+MymrG5EyI7fVlbmmHEhuYmV4pJadXmW1a9wvRHap/aLR1Aw
++akFI29CABbnYD3ZXg+DmNqqE6um5Uem2zYr/9hfSL5KuuwawoyW8HV4gKBe+MgW1
++n1lECvECt9Bn2VepjIUCv4gfHBDel5v1CXxZpTnHLt8Hsno1qTf6dGvvBYEPyTA+
++cAlUeCmfjhBVNQEapUzgW0D7E8JaWHAbJPtwwp/iIO/xqEps3VGOouG+G4GPiABh
++CP7hYUceecgVAF5g75gcI2mZeXAfbHVdfffZZXSYA7RjOAA1bLOopjq6UvYyIBhe
++D72feGzkEPtjTpHtqttDFO9ypBEwnJjTpw2uTcBIbc6E7AThaZeEF/JC84aIRgQQ
++EQoABgUCV0RROwAKCRD3uM6mBW6OVjBwAJ9j4tcWbw03rBy5j4LjP9a4EToJcwCf
++TEfCiAWldVzFkDM9jBfu0V+rIwC5Ag0EVzrf3gEQAN4Nor5B6nG+Rrb0yzI7Q1sO
++VM+OD6CdCN4Ic9E3u+pgsfbtRQKRuSNk8LyPVOpI5rpsJhqGKEDOUWEtb7uyfZxV
++J57QhbhIiJTJsFp50mofC58Kb8+vQ4x6QKdW9dwNSH3+BzwHi6QN+b+ZFifC4J6H
++q/1Ebu1b6q7aWjY7dPh2K+XgKTIq6qio9HFqUTGdj2QM0eLiQ6FDDKH0cMvVqPGD
++dwJXAYoG5Br6WeYFyoBiygfaKXMVu72dL9YhyeUfGJtrZkRv6zqrkwnjWL7Xu1Rd
++5gdYXV1QBz3SyBdZYS3MCbvkMLEkBCXrMG4zvReasrkanMANRQyM/XPMS5joO5dD
++cvL5FDQeOy7+YlznkM5pAar2SLrJDerjVLBvXdCBX4MjsW05t3OPg6ryMId1rHbY
++XtPslrCm9abox53dUtd16Gp/FSxs2TT3Wbos0/zel/zOIyj4kcVR3QjplMchlWOA
++YLYO5VwM1f49/xvFOEMiyb98ameS0fFf1pNAstLodEDxgXIdzoelxbybYrRLymgD
++tp3gkf53mhSN1q5Qu+/CQbSChqbcAsT8qUSdeGkvzR4qKEzDh+dEo4lheNwi7xPZ
++/kj2RjaKs6jjxUWw9oyqxdGt9IwbRo+0TV+gLKUv/uj/lVKO5O3alNN37lobLQbF
++5fFTrp9oXz2eerqAJFI7ABEBAAGJAh8EGAEKAAkFAlc6394CGwwACgkQa3OjbmAm
++38pltg//W37vxUm6OMmXaKuLtE/G4GsM7QHD/OIvXZw+HIzyVClsM8v0+DGolOGU
++Qif9HBRZfrgEWHTVeTDkynq3y7hbA2ekXEGvdKMVTt1JqRWgWPP57dAu8aVaJuR6
++b4HLS0dfavXxnG1K2zunq3eARoOpynUJRzdG95JjXaLyYd1FGU6WBfyaVEnaZump
++o6evG8VcH8fj/h88vhc3qlU+FdP0B8pb6QQpkqZGJeeiKP/yVFI/wQEqITIs1/ST
++stzNGzIeUnNITjUCm/O2Hy+VmrYeFqFNY0SSdRriENnbcxOZN4raQfhBToe5wdgo
++vUXCJaaVTd5WMGJX6Gn3GevMaLjO8YlRfcqnD7rAFUGwTKdGRjgc2NbD0L3fB2Mo
++Y6SIAhEFbVWp/IExGhF+RTX0GldX/NgYMGvf6onlCRbY6By24I+OJhluD6lFaogG
++vyar4hPA2PMw2LUjR5sZGHPGd65LtXviRn6E1nAJ8CM9g9s6LD5nA9A7m+FEI0rL
++LVJf9GjgRbyD6QF53AZanwGUoKUPaF+Jp6HhVXNWEyc2xV1GQL+9U2/BX6zyzAZP
++fVeMPOtWIF9ZPqp7nQw9hhzfYWxJRh4UZ90/ErwzKYzZLYZJcPNMSbScPVB/th/n
++FfI07vQHGzzlrJi+064X5V6BdvKB25qBq67GbYw88+XcrM6R+Uk=
++=tsX2
+ -----END PGP PUBLIC KEY BLOCK-----
+diff --git a/cookbooks/bcpc/libraries/utils.rb b/cookbooks/bcpc/libraries/utils.rb
+index c8a8f7a..e2cc8a3 100644
+--- a/cookbooks/bcpc/libraries/utils.rb
++++ b/cookbooks/bcpc/libraries/utils.rb
+@@ -22,6 +22,10 @@ require 'base64'
+ require 'thread'
+ require 'ipaddr'
+ 
++def is_kilo?
++  return node['bcpc']['openstack_release'] == 'kilo'
++end
++
+ def is_vip?
+     ipaddr = `ip addr show dev #{node['bcpc']['management']['interface']}`
+     return ipaddr.include? node['bcpc']['management']['vip']
+diff --git a/cookbooks/bcpc/recipes/bird.rb b/cookbooks/bcpc/recipes/bird.rb
+new file mode 100644
+index 0000000..1b92366
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/bird.rb
+@@ -0,0 +1,46 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: bird
++#
++# Copyright 2016, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++apt_repository "bird" do
++  uri node['bcpc']['repos']['bird']
++  distribution node['lsb']['codename']
++  components ["main"]
++  key "bird-release.key"
++  notifies :run, "execute[apt-get update]", :immediately
++end
++
++package "bird" do
++    action :upgrade
++end
++
++template "/etc/bird/bird.conf" do
++  source "bird.conf.erb"
++  mode 00644
++  variables(lazy {
++    {
++      :servers => get_all_nodes,
++      :headnodes => get_head_nodes
++    }
++  })
++  # notifies :restart, "service[bird]", :immediately
++end
++
++bash "restart-bird" do
++   code "service bird restart"
++end
+diff --git a/cookbooks/bcpc/recipes/calico-compute.rb b/cookbooks/bcpc/recipes/calico-compute.rb
+new file mode 100644
+index 0000000..d610c15
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/calico-compute.rb
+@@ -0,0 +1,113 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: calico-compute
++#
++# Copyright 2016, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++apt_repository "calico" do
++  uri node['bcpc']['repos']['calico']
++  distribution node['lsb']['codename']
++  components ["main"]
++  key "calico-release.key"
++  notifies :run, "execute[apt-get update]", :immediately
++end
++
++# install etcd from calico repo
++package "etcd" do
++    action :upgrade
++end
++
++package "python-etcd" do
++    action :upgrade
++end
++
++# stop etcd while we create a tmpfs datadir and write proper config
++service "etcd" do
++    action [:enable, :stop]
++end
++
++# TODO: make sure we need this
++bash "etcd-data-dir" do
++  code <<-EOH
++       service etcd stop
++       sleep 5
++       rm -rf /var/lib/etcd/*
++       mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
++       egrep '^tmpfs /var/lib/etcd ' /etc/fstab || echo 'tmpfs /var/lib/etcd tmpfs nodev,nosuid,noexec,nodiratime,size=512M 0 0' >> /etc/fstab
++  EOH
++  # not_if "grep '/var/lib/etcd' /etc/fstab"
++end
++
++template "/etc/init/etcd.conf" do
++    source "etcd.conf.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    notifies :start, "service[etcd]", :immediately
++end
++
++service "etcd" do
++    action [:enable, :start]
++end
++
++# Calico uses their own dnsmasq
++# apt-get install --only-upgrade dnsmasq-base dnsmasq-utils
++package "dnsmasq-base" do
++    action :upgrade
++end
++
++package "dnsmasq-utils" do
++    action :upgrade
++end
++
++# might need to do this:
++#sudo service neutron-dhcp-agent stop
++#echo manual | sudo tee /etc/init/neutron-dhcp-agent.override
++
++bash "disable-neutron-dhcp-agent" do
++    code "echo manual | tee /etc/init/neutron-dhcp-agent.override"
++end
++
++# service neutron-dhcp-agent stop
++bash "stop-neutron-dhcp-agent" do
++   code "service neutron-dhcp-agent stop"
++   ignore_failure true
++end
++
++package "calico-dhcp-agent" do
++    action :upgrade
++end
++
++bash "start-calico-dhcp-agent" do
++    code "service calico-dhcp-agent start"
++    ignore_failure true
++end
++
++package "calico-compute" do
++    action :upgrade
++end
++
++template "/etc/calico/felix.cfg" do
++    source "felix.cfg.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    #notifies :start, "service[etcd]", :immediately
++end
++
++bash "start-calico-felix" do
++    code "service calico-felix restart"
++end
+diff --git a/cookbooks/bcpc/recipes/calico-head.rb b/cookbooks/bcpc/recipes/calico-head.rb
+new file mode 100644
+index 0000000..47b9bbe
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/calico-head.rb
+@@ -0,0 +1,108 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: calico-head
++#
++# Copyright 2016, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# include_recipe "bird" instead of explicit inclusion in run-list???
++
++apt_repository "calico" do
++  uri node['bcpc']['repos']['calico']
++  distribution node['lsb']['codename']
++  components ["main"]
++  key "calico-release.key"
++  notifies :run, "execute[apt-get update]", :immediately
++end
++
++# install etcd (this comes from calico repo!)
++package "etcd" do
++    action :upgrade
++end
++
++package "python-etcd" do
++    action :upgrade
++end
++
++# stop etcd while we create a tmpfs datadir and write proper config
++service "etcd" do
++    action [:enable, :stop]
++end
++
++# TODO: HACK
++bash "etcd-data-dir" do
++  user 'root'
++  code <<-EOH
++       service etcd stop
++       sleep 5
++       rm -rf /var/lib/etcd/*
++       mount -t tmpfs -o size=512m tmpfs /var/lib/etcd
++       egrep '^tmpfs /var/lib/etcd' /etc/fstab || echo 'tmpfs /var/lib/etcd tmpfs nodev,nosuid,noexec,nodiratime,size=512M 0 0' >> /etc/fstab
++  EOH
++  # not_if "grep '/var/lib/etcd' /etc/fstab"
++end
++
++# /etc/init/etcd.conf
++# pass head_nodes => get_head_nodes
++# and check for node['hostname']
++template "/etc/init/etcd.conf" do
++    source "etcd.conf.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    notifies :start, "service[etcd]", :immediately
++end
++
++service "etcd" do
++    action [:enable, :start]
++end
++
++bash "upgrade-dnsmasq" do
++    code "apt-get install -y --only-upgrade dnsmasq-base"
++end
++
++bash "upgrade-dnsmasq-utils" do
++    code "apt-get install -y --only-upgrade dnsmasq-utils"
++end
++
++package "calico-control" do
++    action :upgrade
++end
++
++# sudo  service neutron-server restart
++bash "restart-neutron-server" do
++  code "service neutron-server restart"
++end
++
++bash "wait-for-neutron-to-become-operational" do
++  code ". /root/adminrc; until neutron net-list >/dev/null 2>&1; do sleep 1; done"
++  timeout 60
++end
++
++# in case it is missing
++package "jq" do
++    action :upgrade
++end
++
++# create sample networks for testing
++bash "create-calico-net" do
++    code "source /root/adminrc; neutron net-create --shared --provider:network_type local calico_int_net"
++    not_if "source /root/adminrc; neutron net-list -f json | jq '.[] | .name' | grep '\"calico_int_net\"'"
++end
++
++#bash "create-calico-subnet" do
++#    code "source /root/adminrc; neutron subnet-create --name calico_int_subnet --allocation-pool start=192.168.100.30,end=192.168.100.50  calico_int_net 192.168.100.0/25"
++#    not_if "source /root/adminrc; neutron subnet-list -f json | jq '.[] | .name' | grep 'calico_int_subnet'"
++#end
+diff --git a/cookbooks/bcpc/recipes/ceph-common.rb b/cookbooks/bcpc/recipes/ceph-common.rb
+index 1f52d6b..b8d7740 100644
+--- a/cookbooks/bcpc/recipes/ceph-common.rb
++++ b/cookbooks/bcpc/recipes/ceph-common.rb
+@@ -35,7 +35,7 @@ bash "remove-old-ceph-key" do
+ end
+ 
+ if platform?("debian", "ubuntu")
+-    include_recipe "bcpc::networking"
++    include_recipe "bcpc::networking-prereqs"
+ end
+ 
+ %w{librados2 librbd1 libcephfs1 python-ceph ceph ceph-common ceph-fs-common ceph-mds ceph-fuse}.each do |pkg|
+@@ -78,6 +78,10 @@ directory "/var/run/ceph/" do
+   mode  "0755"
+ end
+ 
++package 'libvirt-bin' do
++  action :upgrade
++end
++
+ directory "/var/run/ceph/guests/" do
+   owner "libvirt-qemu"
+   group "libvirtd"
+diff --git a/cookbooks/bcpc/recipes/cinder.rb b/cookbooks/bcpc/recipes/cinder.rb
+index 349c961..dd1124f 100644
+--- a/cookbooks/bcpc/recipes/cinder.rb
++++ b/cookbooks/bcpc/recipes/cinder.rb
+@@ -60,47 +60,47 @@ cookbook_file "/tmp/cinder_availability_zone_fallback.patch" do
+     mode 00644
+ end
+ 
+-bash "patch-for-cinder-availability-zone-fallback-2015.1.0-and-2015.1.1" do
+-    user "root"
+-    code <<-EOH
+-       cd /usr/lib/python2.7/dist-packages
+-       patch -p1 < /tmp/cinder_availability_zone_fallback.patch
+-       rv=$?
+-       if [ $rv -ne 0 ]; then
+-         echo "Error applying patch ($rv) - aborting!"
+-         exit $rv
+-       fi
+-       cp /tmp/cinder_availability_zone_fallback.patch .
+-    EOH
+-    only_if "shasum /usr/lib/python2.7/dist-packages/cinder/common/config.py | grep -q '^96b5ea3694440ca5fcc3c7fdea5992209aa1f1ed' && shasum /usr/lib/python2.7/dist-packages/cinder/volume/flows/api/create_volume.py | grep -q '^a18858b74d8d0cf747377dd89f6643667d4ec0ae'"
+-    notifies :restart, "service[cinder-api]", :immediately
+-    notifies :restart, "service[cinder-volume]", :immediately
+-    notifies :restart, "service[cinder-scheduler]", :immediately
+-end
+-
+-# 2015.1.2 version of the above patch
+-bcpc_patch "cinder-az-fallback-2015.1.2" do
+-  patch_file 'cinder-az-fallback-2015.1.2.patch'
+-  patch_root_dir '/usr/lib/python2.7/dist-packages'
+-  shasums_before_apply 'cinder-az-fallback-2015.1.2.patch.BEFORE.SHASUMS'
+-  shasums_after_apply 'cinder-az-fallback-2015.1.2.patch.AFTER.SHASUMS'
+-  notifies :restart, 'service[cinder-api]', :immediately
+-  notifies :restart, 'service[cinder-volume]', :immediately
+-  notifies :restart, 'service[cinder-scheduler]', :immediately
+-  not_if "dpkg -s python-cinder | egrep -q '^Version: 1:2015.1.(0|1)'"
+-end
+-
+-# Deal with quota update commands (applies to cinderclient < 1.3.1)
+-# upstream bug #1423884
+-bcpc_patch "fix-quota-class-update" do
+-    patch_file              'fix-quota-class-update.patch'
+-    patch_root_dir          '/usr/lib/python2.7/dist-packages'
+-    shasums_before_apply    'fix-quota-class-update.patch.BEFORE.SHASUMS'
+-    shasums_after_apply     'fix-quota-class-update.patch.AFTER.SHASUMS'
+-    notifies :restart, "service[cinder-api]", :immediately
+-    notifies :restart, "service[cinder-volume]", :immediately
+-    notifies :restart, "service[cinder-scheduler]", :immediately
+-end
++#bash "patch-for-cinder-availability-zone-fallback-2015.1.0-and-2015.1.1" do
++#    user "root"
++#    code <<-EOH
++#       cd /usr/lib/python2.7/dist-packages
++#       patch -p1 < /tmp/cinder_availability_zone_fallback.patch
++#       rv=$?
++#       if [ $rv -ne 0 ]; then
++#         echo "Error applying patch ($rv) - aborting!"
++#         exit $rv
++#       fi
++#       cp /tmp/cinder_availability_zone_fallback.patch .
++#    EOH
++#    only_if "shasum /usr/lib/python2.7/dist-packages/cinder/common/config.py | grep -q '^96b5ea3694440ca5fcc3c7fdea5992209aa1f1ed' && shasum /usr/lib/python2.7/dist-packages/cinder/volume/flows/api/create_volume.py | grep -q '^a18858b74d8d0cf747377dd89f6643667d4ec0ae'"
++#    notifies :restart, "service[cinder-api]", :immediately
++#    notifies :restart, "service[cinder-volume]", :immediately
++#    notifies :restart, "service[cinder-scheduler]", :immediately
++#end
++#
++## 2015.1.2 version of the above patch
++#bcpc_patch "cinder-az-fallback-2015.1.2" do
++#  patch_file 'cinder-az-fallback-2015.1.2.patch'
++#  patch_root_dir '/usr/lib/python2.7/dist-packages'
++#  shasums_before_apply 'cinder-az-fallback-2015.1.2.patch.BEFORE.SHASUMS'
++#  shasums_after_apply 'cinder-az-fallback-2015.1.2.patch.AFTER.SHASUMS'
++#  notifies :restart, 'service[cinder-api]', :immediately
++#  notifies :restart, 'service[cinder-volume]', :immediately
++#  notifies :restart, 'service[cinder-scheduler]', :immediately
++#  not_if "dpkg -s python-cinder | egrep -q '^Version: 1:2015.1.(0|1)'"
++#end
++#
++## Deal with quota update commands (applies to cinderclient < 1.3.1)
++## upstream bug #1423884
++#bcpc_patch "fix-quota-class-update" do
++#    patch_file              'fix-quota-class-update.patch'
++#    patch_root_dir          '/usr/lib/python2.7/dist-packages'
++#    shasums_before_apply    'fix-quota-class-update.patch.BEFORE.SHASUMS'
++#    shasums_after_apply     'fix-quota-class-update.patch.AFTER.SHASUMS'
++#    notifies :restart, "service[cinder-api]", :immediately
++#    notifies :restart, "service[cinder-volume]", :immediately
++#    notifies :restart, "service[cinder-scheduler]", :immediately
++#end
+ 
+ template "/etc/cinder/cinder.conf" do
+     source "cinder.conf.erb"
+@@ -135,7 +135,6 @@ ruby_block "cinder-database-creation" do
+     not_if { system "MYSQL_PWD=#{get_config('mysql-root-password')} mysql -uroot -e 'SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = \"#{node['bcpc']['dbname']['cinder']}\"'|grep \"#{node['bcpc']['dbname']['cinder']}\" >/dev/null" }
+ end
+ 
+-
+ bash "cinder-database-sync" do
+     action :nothing
+     user "root"
+@@ -194,6 +193,18 @@ node['bcpc']['ceph']['enabled_pools'].each do |type|
+     end
+ end
+ 
++node['bcpc']['cinder']['quota'].each do |k, v|
++  bash "cinder-set-default-#{k}-quota" do
++    user "root"
++    code <<-EOH
++      . /root/adminrc
++      cinder quota-class-update --#{k} #{v} default
++    EOH
++  end
++  # figure this out later
++  #not_if ". /root/adminrc; cinder quota-class-show
++end
++
+ service "tgt" do
+     action [:stop, :disable]
+ end
+diff --git a/cookbooks/bcpc/recipes/keystone.rb b/cookbooks/bcpc/recipes/keystone.rb
+index 3c85a63..7d4533c 100644
+--- a/cookbooks/bcpc/recipes/keystone.rb
++++ b/cookbooks/bcpc/recipes/keystone.rb
+@@ -329,6 +329,20 @@ ruby_block "keystone-create-image-service" do
+         openstack service list -f json | jq '.[] | .Type==\"image\"' | grep '^true$';" }
+ end
+ 
++ruby_block "keystone-create-network-service" do
++  block do
++  %x[
++        export OS_TOKEN="#{get_config('keystone-admin-token')}";
++        export OS_URL="#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/";
++        openstack service create --name 'Networking Service' --description 'OpenStack Networking Service' network
++  ]
++  end
++  not_if { system "
++        export OS_TOKEN=\"#{get_config('keystone-admin-token')}\";
++        export OS_URL=\"#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/\";
++        openstack service list -f json | jq '.[] | .Type==\"network\"' | grep '^true$';" }
++end
++
+ ruby_block "keystone-create-identity-endpoint" do
+   block do
+   %x[
+@@ -367,42 +381,83 @@ ruby_block "keystone-create-compute-endpoint" do
+         openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"compute\"' | grep '^true$';" }
+ end
+ 
+-ruby_block "keystone-create-volume-endpoint" do
++# Cinder v1 is gone in Liberty, set up both endpoints and point them at the v2 API
++if is_kilo?
++  ruby_block "keystone-create-volume-endpoint" do
++    block do
++    %x[
++          export OS_TOKEN="#{get_config('keystone-admin-token')}";
++          export OS_URL="#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/";
++          openstack endpoint create \
++              --region '#{node['bcpc']['region_name']}' \
++              --publicurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
++              --adminurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
++              --internalurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
++              volume;
++    ]
++    end
++    not_if { system "
++          export OS_TOKEN=\"#{get_config('keystone-admin-token')}\";
++          export OS_URL=\"#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/\";
++          openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"volume\"' | grep '^true$';" }
++  end
++else
++  ruby_block "keystone-create-volume-endpoint" do
++    block do
++    %x[
++          export OS_TOKEN="#{get_config('keystone-admin-token')}";
++          export OS_URL="#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/";
++          openstack endpoint create \
++              --region '#{node['bcpc']['region_name']}' \
++              --publicurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++              --adminurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++              --internalurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++              volume;
++    ]
++    end
++    not_if { system "
++          export OS_TOKEN=\"#{get_config('keystone-admin-token')}\";
++          export OS_URL=\"#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/\";
++          openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"volume\"' | grep '^true$';" }
++  end
++end
++
++ruby_block "keystone-create-volumeV2-endpoint" do
+   block do
+   %x[
+         export OS_TOKEN="#{get_config('keystone-admin-token')}";
+         export OS_URL="#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/";
+         openstack endpoint create \
+             --region '#{node['bcpc']['region_name']}' \
+-            --publicurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
+-            --adminurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
+-            --internalurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v1/$(tenant_id)s' \
+-            volume;
++            --publicurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++            --adminurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++            --internalurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
++            volumev2;
+   ]
+   end
+   not_if { system "
+         export OS_TOKEN=\"#{get_config('keystone-admin-token')}\";
+         export OS_URL=\"#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/\";
+-        openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"volume\"' | grep '^true$';" }
++        openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"volumev2\"' | grep '^true$';" }
+ end
+ 
+-ruby_block "keystone-create-volumeV2-endpoint" do
++ruby_block "keystone-create-network-endpoint" do
+   block do
+   %x[
+         export OS_TOKEN="#{get_config('keystone-admin-token')}";
+         export OS_URL="#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/";
+         openstack endpoint create \
+             --region '#{node['bcpc']['region_name']}' \
+-            --publicurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
+-            --adminurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
+-            --internalurl '#{node['bcpc']['protocol']['cinder']}://openstack.#{node['bcpc']['cluster_domain']}:8776/v2/$(tenant_id)s' \
+-            volumev2;
++            --publicurl '#{node['bcpc']['protocol']['neutron']}://openstack.#{node['bcpc']['cluster_domain']}:9696/' \
++            --adminurl '#{node['bcpc']['protocol']['neutron']}://openstack.#{node['bcpc']['cluster_domain']}:9696/' \
++            --internalurl '#{node['bcpc']['protocol']['neutron']}://openstack.#{node['bcpc']['cluster_domain']}:9696/' \
++            network;
+   ]
+   end
+   not_if { system "
+         export OS_TOKEN=\"#{get_config('keystone-admin-token')}\";
+         export OS_URL=\"#{node['bcpc']['protocol']['keystone']}://openstack.#{node['bcpc']['cluster_domain']}:35357/v2.0/\";
+-        openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"volumev2\"' | grep '^true$';" }
++        openstack endpoint list -f json | jq '.[] | .[\"Service Type\"]==\"network\"' | grep '^true$';" }
+ end
+ 
+ ruby_block "keystone-create-image-endpoint" do
+diff --git a/cookbooks/bcpc/recipes/networking-gw-test.rb b/cookbooks/bcpc/recipes/networking-gw-test.rb
+index 57dd8b2..0498035 100644
+--- a/cookbooks/bcpc/recipes/networking-gw-test.rb
++++ b/cookbooks/bcpc/recipes/networking-gw-test.rb
+@@ -22,7 +22,7 @@ if node['bcpc']['enabled']['network_tests'] then
+     ruby_block "check-gateways" do
+         block do
+             ping_node("storage gateway", node['bcpc']['storage']['gateway'])
+-            ping_node("floating gateway", node['bcpc']['floating']['gateway'])
++            ping_node("floating gateway", node['bcpc']['floating']['gateway']) unless node['bcpc']['enabled']['neutron']
+         end
+     end
+ 
+diff --git a/cookbooks/bcpc/recipes/networking-link-test.rb b/cookbooks/bcpc/recipes/networking-link-test.rb
+index a811e0e..4cef959 100644
+--- a/cookbooks/bcpc/recipes/networking-link-test.rb
++++ b/cookbooks/bcpc/recipes/networking-link-test.rb
+@@ -36,7 +36,7 @@ if node['bcpc']['enabled']['network_tests'] then
+                 ) then
+                     Chef::Log.info("Found a peer : #{host.hostname}")
+                     othernodes.push host
+-                    float_addr.push host['bcpc']['floating']['ip']
++                    float_addr.push host['bcpc']['floating']['ip'] unless node['bcpc']['enabled']['neutron']
+                     storage_addr.push host['bcpc']['storage']['ip']
+                 end
+             end
+@@ -45,7 +45,7 @@ if node['bcpc']['enabled']['network_tests'] then
+             if othernodes.empty? then
+                 Chef::Log.info("No peers, using self : #{node['hostname']}")
+                 othernodes.push node
+-                float_addr.push node['bcpc']['floating']['ip']
++                float_addr.push node['bcpc']['floating']['ip'] unless node['bcpc']['enabled']['neutron']
+                 storage_addr.push node['bcpc']['storage']['ip']
+             end
+         end
+@@ -77,9 +77,11 @@ if node['bcpc']['enabled']['network_tests'] then
+                 FileUtils.touch("/etc/storage-test-success")
+             end
+ 
+-            if not File.file?("/etc/floating-test-success")
+-                ping_node_list("floating peers", float_addr)
+-                FileUtils.touch("/etc/floating-test-success")
++            unless node['bcpc']['enabled']['neutron']
++              if not File.file?("/etc/floating-test-success")
++                  ping_node_list("floating peers", float_addr)
++                  FileUtils.touch("/etc/floating-test-success")
++              end
+             end
+         end
+     end
+diff --git a/cookbooks/bcpc/recipes/networking-novanetwork-prereqs.rb b/cookbooks/bcpc/recipes/networking-novanetwork-prereqs.rb
+new file mode 100644
+index 0000000..fd89915
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/networking-novanetwork-prereqs.rb
+@@ -0,0 +1,265 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: networking
++#
++# Copyright 2013, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++include_recipe "bcpc::default"
++include_recipe "bcpc::system"
++include_recipe "bcpc::certs"
++
++template "/etc/hosts" do
++    source "hosts.erb"
++    mode 00644
++    variables(:servers => get_all_nodes, :bootstrap_node => get_bootstrap_node)
++end
++
++template "/etc/ssh/sshd_config" do
++    source "sshd_config.erb"
++    mode 00644
++    notifies :restart, "service[ssh]", :immediately
++end
++
++service "ssh" do
++    action [:enable, :start]
++end
++
++service "cron" do
++    action [:enable, :start]
++end
++
++# Core networking package
++package "vlan"
++
++# Enable LLDP - see https://github.com/bloomberg/chef-bcpc/pull/120
++package "lldpd"
++
++bash "enable-mellanox" do
++    user "root"
++    code <<-EOH
++        if [ -z "`lsmod | grep mlx4_en`" ]; then
++            modprobe mlx4_en
++        fi
++        if [ -z "`grep mlx4_en /etc/modules`" ]; then
++            echo "mlx4_en" >> /etc/modules
++        fi
++    EOH
++    only_if "lspci | grep Mellanox"
++end
++
++bash "enable-8021q" do
++    user "root"
++    code <<-EOH
++        modprobe 8021q
++        sed --in-place '/^8021q/d' /etc/modules
++        echo '8021q' >> /etc/modules
++    EOH
++    not_if "grep -e '^8021q' /etc/modules"
++end
++
++directory "/etc/network/interfaces.d" do
++    owner "root"
++    group "root"
++    mode 00755
++    action :create
++end
++
++bash "setup-interfaces-source" do
++    user "root"
++    code <<-EOH
++        echo "source /etc/network/interfaces.d/iface-*" >> /etc/network/interfaces
++    EOH
++    not_if "grep '^source /etc/network/interfaces.d/' /etc/network/interfaces"
++end
++
++[['management', 100], ['storage', 300]].each do |net, metric|
++    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface']}" do
++        source "network.iface.erb"
++        owner "root"
++        group "root"
++        mode 00644
++        variables(
++            :interface => node['bcpc'][net]['interface'],
++            :ip => node['bcpc'][net]['ip'],
++            :netmask => node['bcpc'][net]['netmask'],
++            :gateway => node['bcpc'][net]['gateway'],
++            :mtu => node['bcpc'][net]['mtu'],
++            :metric => metric
++        )
++    end
++
++end
++
++%w{ storage floating }.each do |net|
++  if not node['bcpc'][net]['interface-parent'].nil?
++    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface-parent']}" do
++      source "network.iface-parent.erb"
++      owner "root"
++      group "root"
++      mode 00644
++      variables(
++                :interface => node['bcpc'][net]['interface-parent'],
++                :mtu => node['bcpc'][net]['mtu'],
++                )
++    end
++  end
++end
++
++# set up the DNS resolvers
++# we want the VIP which will be running powerdns to be first on the list
++# but the first entry in our master list is also the only one in pdns,
++# so make that the last entry to minimize double failures when upstream dies.
++resolvers=node['bcpc']['dns_servers'].dup
++resolvers.push resolvers.shift
++resolvers.unshift node['bcpc']['management']['vip']
++
++template "/etc/network/interfaces.d/iface-#{node['bcpc']['floating']['interface']}" do
++    source "network.iface.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    variables(
++        :interface => node['bcpc']['floating']['interface'],
++        :ip => node['bcpc']['floating']['ip'],
++        :netmask => node['bcpc']['floating']['netmask'],
++        :gateway => node['bcpc']['floating']['gateway'],
++        :dns => resolvers,
++        :mtu => node['bcpc']['floating']['mtu'],
++        :metric => 200
++    )
++end
++
++dhcp_resolvconf_hook="/etc/dhcp/dhclient-enter-hooks.d/resolvconf"
++bash "disable-dhclient-resolvconf-enter-hook" do
++    user "root"
++    code <<-EOH
++        gzip #{dhcp_resolvconf_hook}
++        resolvconf --enable-updates
++        resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
++    EOH
++    only_if { ::File.exists?(dhcp_resolvconf_hook) }
++end
++
++bash "interface-mgmt-make-static-if-dhcp" do
++    user "root"
++    code <<-EOH
++        sed --in-place '/\\(.*#{node['bcpc']['management']['interface']}.*\\)/d' /etc/network/interfaces
++        resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
++    EOH
++    only_if "cat /etc/network/interfaces | grep #{node['bcpc']['management']['interface']} | grep dhcp"
++end
++
++%w{ management storage floating }.each do |iface|
++
++  if not node['bcpc'][iface]['interface-parent'].nil?
++    bash "#{iface} up" do
++      user "root"
++      code <<-EOH
++            ifup #{node['bcpc'][iface]['interface-parent']}
++        EOH
++      not_if "ip link show up | grep #{node['bcpc'][iface]['interface-parent']} | grep -v #{node['bcpc'][iface]['interface']}"
++    end
++    if node['bcpc'][iface]['mtu']
++        execute "set-#{iface}-mtu" do
++            command "ifconfig #{node['bcpc'][iface]['interface-parent']} mtu #{node['bcpc'][iface]['mtu']} up"
++            not_if  "ifconfig #{node['bcpc'][iface]['interface-parent']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
++        end
++    end
++  end
++
++    bash "#{iface} up" do
++        user "root"
++        code <<-EOH
++            ifup #{node['bcpc'][iface]['interface']}
++        EOH
++        not_if "ip link show up | grep #{node['bcpc'][iface]['interface']}"
++    end
++
++    if node['bcpc'][iface]['mtu']
++        execute "set-#{iface}-mtu" do
++            command "ifconfig #{node['bcpc'][iface]['interface']} mtu #{node['bcpc'][iface]['mtu']} up"
++            not_if  "ifconfig #{node['bcpc'][iface]['interface']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
++        end
++    end
++
++end
++
++bash "routing-management" do
++    user "root"
++    code "echo '1 mgmt' >> /etc/iproute2/rt_tables"
++    not_if "grep -e '^1 mgmt' /etc/iproute2/rt_tables"
++end
++
++bash "routing-storage" do
++    user "root"
++    code "echo '2 storage' >> /etc/iproute2/rt_tables"
++    not_if "grep -e '^2 storage' /etc/iproute2/rt_tables"
++end
++
++if node["roles"].include? "BCPC-Monitoring"
++    # ipset is used to maintain largish block(s) of IP addresses to be referred to
++    # by iptables
++    package "ipset"
++
++    bash "create-ipset-lists" do
++        user "root"
++        code <<-EOH
++            ipset list monitoring-clients >/dev/null || ipset create monitoring-clients hash:ip
++        EOH
++    end
++
++    # Stage monitoring-clients ipset, and swap if lists have changed
++    template "/tmp/ipset-monitoring-clients" do
++        mode 00600
++        source "ipset-monitoring-clients.erb"
++        variables(
++            :clients => node['bcpc']['monitoring']['external_clients'].sort
++        )
++        notifies :run, "bash[apply-ipset-monitoring-clients]", :immediately
++    end
++
++    bash "apply-ipset-monitoring-clients" do
++        action :nothing
++        user "root"
++        code <<-EOH
++            ipset restore -f /tmp/ipset-monitoring-clients
++            ipset swap monitoring-clients-staging monitoring-clients
++            ipset destroy monitoring-clients-staging
++        EOH
++    end
++end
++
++%w{ routing firewall }.each do |function|
++    template "/etc/network/if-up.d/bcpc-#{function}" do
++        mode 00775
++        source "bcpc-#{function}.erb"
++        notifies :run, "execute[run-#{function}-script-once]", :immediately
++    end
++
++    execute "run-#{function}-script-once" do
++        action :nothing
++        command "/etc/network/if-up.d/bcpc-#{function}"
++    end
++end
++
++
++bash "disable-noninteractive-pam-logging" do
++    user "root"
++    code "sed --in-place 's/^\\(session\\s*required\\s*pam_unix.so\\)/#\\1/' /etc/pam.d/common-session-noninteractive"
++    only_if "grep -e '^session\\s*required\\s*pam_unix.so' /etc/pam.d/common-session-noninteractive"
++end
++
++include_recipe "bcpc::apache2"
+diff --git a/cookbooks/bcpc/recipes/networking-prereqs.rb b/cookbooks/bcpc/recipes/networking-prereqs.rb
+new file mode 100644
+index 0000000..5c974eb
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/networking-prereqs.rb
+@@ -0,0 +1,342 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: networking-prereqs
++#
++# Copyright 2016, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++include_recipe "bcpc::default"
++include_recipe "bcpc::system"
++include_recipe "bcpc::certs"
++
++template "/etc/hosts" do
++  source "hosts.erb"
++  mode 00644
++  variables(
++    :servers => get_all_nodes,
++    :bootstrap_node => get_bootstrap_node
++  )
++end
++
++template "/etc/ssh/sshd_config" do
++  source "sshd_config.erb"
++  mode 00644
++  notifies :restart, "service[ssh]", :immediately
++end
++
++%w{ ssh cron}.each do |svc|
++  service svc do
++    action [:enable, :start]
++  end
++end
++
++package "vlan"
++
++# Enable LLDP - see https://github.com/bloomberg/chef-bcpc/pull/120
++package "lldpd"
++
++bash "enable-mellanox" do
++  user "root"
++  code <<-EOH
++    if [ -z "`lsmod | grep mlx4_en`" ]; then
++      modprobe mlx4_en
++    fi
++    if [ -z "`grep mlx4_en /etc/modules`" ]; then
++      echo "mlx4_en" >> /etc/modules
++    fi
++  EOH
++  only_if "lspci | grep Mellanox"
++end
++
++directory "/etc/network/interfaces.d" do
++  owner "root"
++  group "root"
++  mode 00755
++  action :create
++end
++
++# changed to be *.cfg to align this with what Vagrant does
++bash "setup-interfaces-source" do
++  user "root"
++  code <<-EOH
++    echo "source /etc/network/interfaces.d/*.cfg" >> /etc/network/interfaces
++  EOH
++  not_if "grep '^source /etc/network/interfaces.d/*.cfg' /etc/network/interfaces"
++end
++
++bash "enable-8021q" do
++  user "root"
++  code <<-EOH
++    modprobe 8021q
++    sed --in-place '/^8021q/d' /etc/modules
++    echo '8021q' >> /etc/modules
++  EOH
++  not_if "grep -e '^8021q' /etc/modules"
++end
++
++if node['bcpc']['enabled']['neutron']
++  template "/etc/network/interfaces.d/iface-#{node['bcpc']['management']['interface']}.cfg" do
++    source "network.iface.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    variables(
++      :interface => node['bcpc']['management']['interface'],
++      :type => 'static',
++      :ip => node['bcpc']['management']['ip'],
++      :netmask => node['bcpc']['management']['netmask'],
++      :gateway => node['bcpc']['management']['gateway'],
++      :mtu => node['bcpc']['management']['mtu'],
++      :metric => 100
++    )
++  end
++
++  # storage interface split from above while tinkering with whether it should have a gateway
++  template "/etc/network/interfaces.d/iface-#{node['bcpc']['storage']['interface']}.cfg" do
++    source "network.iface.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    variables(
++      :interface => node['bcpc']['storage']['interface'],
++      :type => 'static',
++      :ip => node['bcpc']['storage']['ip'],
++      :netmask => node['bcpc']['storage']['netmask'],
++      :gateway => node['bcpc']['storage']['gateway'],
++      :mtu => node['bcpc']['storage']['mtu'],
++      :metric => 300
++    )
++  end
++
++  # storage interface split from above while tinkering with whether it should have a gateway
++  template "/etc/network/interfaces.d/iface-#{node['bcpc']['floating']['interface']}.cfg" do
++    source "network.iface.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    variables(
++      :interface => node['bcpc']['floating']['interface'],
++      :type => 'static',
++      :ip => node['bcpc']['floating']['ip'],
++      :netmask => node['bcpc']['floating']['netmask'],
++      :gateway => node['bcpc']['floating']['gateway'],
++      :mtu => node['bcpc']['floating']['mtu'],
++      :metric => 300
++    )
++  end
++
++  # for Neutron, configure eth4 as a manual interface (so that it can be up but
++  # does not get an address)
++  #template "/etc/network/interfaces.d/iface-eth4.cfg" do
++#    source "network.iface.erb"
++#    owner "root"
++#    group "root"
++#    mode 00644
++#    variables(
++#      :interface => 'eth4',
++#      :type => 'manual',
++#      :mtu => node['bcpc']['floating']['mtu'],
++#    )
++#  end
++
++#  bash 'ifup-eth4' do
++#    code 'ifup eth4'
++#  end
++else
++  [['management', 100], ['storage', 300]].each do |net, metric|
++    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface']}.cfg" do
++      source "network.iface.erb"
++      owner "root"
++      group "root"
++      mode 00644
++      variables(
++        :interface => node['bcpc'][net]['interface'],
++        :ip => node['bcpc'][net]['ip'],
++        :netmask => node['bcpc'][net]['netmask'],
++        :gateway => node['bcpc'][net]['gateway'],
++        :mtu => node['bcpc'][net]['mtu'],
++        :metric => metric
++      )
++    end
++  end
++end
++
++%w{ storage floating }.each do |net|
++  unless node['bcpc'][net]['interface-parent'].nil?
++    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface-parent']}.cfg" do
++      source "network.iface-parent.erb"
++      owner "root"
++      group "root"
++      mode 00644
++      variables(
++        :interface => node['bcpc'][net]['interface-parent'],
++        :mtu => node['bcpc'][net]['mtu'],
++      )
++    end
++  end
++end
++
++# set up the DNS resolvers
++# we want the VIP which will be running powerdns to be first on the list
++# but the first entry in our master list is also the only one in pdns,
++# so make that the last entry to minimize double failures when upstream dies.
++resolvers=node['bcpc']['dns_servers'].dup
++resolvers.push resolvers.shift
++resolvers.unshift node['bcpc']['management']['vip']
++
++# do not give the instance traffic interface an IP under the Neutron model
++unless node['bcpc']['enabled']['neutron']
++  template "/etc/network/interfaces.d/iface-#{node['bcpc']['floating']['interface']}" do
++    source "network.iface.erb"
++    owner "root"
++    group "root"
++    mode 00644
++    variables(
++      :interface => node['bcpc']['floating']['interface'],
++      :ip => node['bcpc']['floating']['ip'],
++      :netmask => node['bcpc']['floating']['netmask'],
++      :gateway => node['bcpc']['floating']['gateway'],
++      :dns => resolvers,
++      :mtu => node['bcpc']['floating']['mtu'],
++      :metric => 200
++    )
++  end
++end
++
++dhcp_resolvconf_hook="/etc/dhcp/dhclient-enter-hooks.d/resolvconf"
++bash "disable-dhclient-resolvconf-enter-hook" do
++  user "root"
++  code <<-EOH
++    gzip #{dhcp_resolvconf_hook}
++    resolvconf --enable-updates
++    resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
++  EOH
++  only_if { ::File.exists?(dhcp_resolvconf_hook) }
++end
++
++bash "interface-mgmt-make-static-if-dhcp" do
++  user "root"
++  code <<-EOH
++    sed --in-place '/\\(.*#{node['bcpc']['management']['interface']}.*\\)/d' /etc/network/interfaces
++    resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
++  EOH
++  only_if "cat /etc/network/interfaces | grep #{node['bcpc']['management']['interface']} | grep dhcp"
++end
++
++ifs_to_bring_up = node['bcpc']['enabled']['neutron'] ? %w{ management storage } : %w{ management storage floating }
++
++ifs_to_bring_up.each do |iface|
++  unless node['bcpc'][iface]['interface-parent'].nil?
++    bash "#{iface} up" do
++      user "root"
++      code <<-EOH
++        ifup #{node['bcpc'][iface]['interface-parent']}
++      EOH
++      not_if "ip link show up | grep #{node['bcpc'][iface]['interface-parent']} | grep -v #{node['bcpc'][iface]['interface']}"
++    end
++    if node['bcpc'][iface]['mtu']
++      execute "set-#{iface}-mtu" do
++        command "ifconfig #{node['bcpc'][iface]['interface-parent']} mtu #{node['bcpc'][iface]['mtu']} up"
++        not_if  "ifconfig #{node['bcpc'][iface]['interface-parent']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
++      end
++    end
++  end
++
++  bash "#{iface} up" do
++    user "root"
++    code <<-EOH
++      ifup #{node['bcpc'][iface]['interface']}
++    EOH
++    not_if "ip link show up | grep #{node['bcpc'][iface]['interface']}"
++  end
++
++  if node['bcpc'][iface]['mtu']
++    execute "set-#{iface}-mtu" do
++      command "ifconfig #{node['bcpc'][iface]['interface']} mtu #{node['bcpc'][iface]['mtu']} up"
++      not_if  "ifconfig #{node['bcpc'][iface]['interface']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
++    end
++  end
++end
++
++unless node['bcpc']['enabled']['neutron']
++  bash "routing-management" do
++    user "root"
++    code "echo '1 mgmt' >> /etc/iproute2/rt_tables"
++    not_if "grep -e '^1 mgmt' /etc/iproute2/rt_tables"
++  end
++
++  bash "routing-storage" do
++    user "root"
++    code "echo '2 storage' >> /etc/iproute2/rt_tables"
++    not_if "grep -e '^2 storage' /etc/iproute2/rt_tables"
++  end
++
++  %w{ routing firewall }.each do |function|
++    template "/etc/network/if-up.d/bcpc-#{function}" do
++      mode 00775
++      source "bcpc-#{function}.erb"
++      notifies :run, "execute[run-#{function}-script-once]", :immediately
++    end
++
++    execute "run-#{function}-script-once" do
++      action :nothing
++      command "/etc/network/if-up.d/bcpc-#{function}"
++    end
++  end
++end
++
++# for the moment, explode on the confluence of Neutron and monitoring
++if node['roles'].include?('BCPC-Monitoring') and node['bcpc']['enabled']['neutron']
++  raise Exception, "BCPC-Monitoring role and Neutron are mutually exclusive for the time being"
++end
++
++if node["roles"].include? "BCPC-Monitoring"
++  # ipset is used to maintain largish block(s) of IP addresses to be referred to
++  # by iptables
++  package "ipset"
++
++  bash "create-ipset-lists" do
++    user "root"
++    code <<-EOH
++      ipset list monitoring-clients >/dev/null || ipset create monitoring-clients hash:ip
++    EOH
++  end
++
++  # Stage monitoring-clients ipset, and swap if lists have changed
++  template "/tmp/ipset-monitoring-clients" do
++    mode 00600
++    source "ipset-monitoring-clients.erb"
++    variables(
++      :clients => node['bcpc']['monitoring']['external_clients'].sort
++    )
++    notifies :run, "bash[apply-ipset-monitoring-clients]", :immediately
++  end
++
++  bash "apply-ipset-monitoring-clients" do
++    action :nothing
++    user "root"
++    code <<-EOH
++        ipset restore -f /tmp/ipset-monitoring-clients
++        ipset swap monitoring-clients-staging monitoring-clients
++        ipset destroy monitoring-clients-staging
++    EOH
++  end
++end
++
++bash "disable-noninteractive-pam-logging" do
++    user "root"
++    code "sed --in-place 's/^\\(session\\s*required\\s*pam_unix.so\\)/#\\1/' /etc/pam.d/common-session-noninteractive"
++    only_if "grep -e '^session\\s*required\\s*pam_unix.so' /etc/pam.d/common-session-noninteractive"
++end
+diff --git a/cookbooks/bcpc/recipes/networking.rb b/cookbooks/bcpc/recipes/networking.rb
+deleted file mode 100644
+index fd89915..0000000
+--- a/cookbooks/bcpc/recipes/networking.rb
++++ /dev/null
+@@ -1,265 +0,0 @@
+-#
+-# Cookbook Name:: bcpc
+-# Recipe:: networking
+-#
+-# Copyright 2013, Bloomberg Finance L.P.
+-#
+-# Licensed under the Apache License, Version 2.0 (the "License");
+-# you may not use this file except in compliance with the License.
+-# You may obtain a copy of the License at
+-#
+-# http://www.apache.org/licenses/LICENSE-2.0
+-#
+-# Unless required by applicable law or agreed to in writing, software
+-# distributed under the License is distributed on an "AS IS" BASIS,
+-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-# See the License for the specific language governing permissions and
+-# limitations under the License.
+-#
+-
+-include_recipe "bcpc::default"
+-include_recipe "bcpc::system"
+-include_recipe "bcpc::certs"
+-
+-template "/etc/hosts" do
+-    source "hosts.erb"
+-    mode 00644
+-    variables(:servers => get_all_nodes, :bootstrap_node => get_bootstrap_node)
+-end
+-
+-template "/etc/ssh/sshd_config" do
+-    source "sshd_config.erb"
+-    mode 00644
+-    notifies :restart, "service[ssh]", :immediately
+-end
+-
+-service "ssh" do
+-    action [:enable, :start]
+-end
+-
+-service "cron" do
+-    action [:enable, :start]
+-end
+-
+-# Core networking package
+-package "vlan"
+-
+-# Enable LLDP - see https://github.com/bloomberg/chef-bcpc/pull/120
+-package "lldpd"
+-
+-bash "enable-mellanox" do
+-    user "root"
+-    code <<-EOH
+-        if [ -z "`lsmod | grep mlx4_en`" ]; then
+-            modprobe mlx4_en
+-        fi
+-        if [ -z "`grep mlx4_en /etc/modules`" ]; then
+-            echo "mlx4_en" >> /etc/modules
+-        fi
+-    EOH
+-    only_if "lspci | grep Mellanox"
+-end
+-
+-bash "enable-8021q" do
+-    user "root"
+-    code <<-EOH
+-        modprobe 8021q
+-        sed --in-place '/^8021q/d' /etc/modules
+-        echo '8021q' >> /etc/modules
+-    EOH
+-    not_if "grep -e '^8021q' /etc/modules"
+-end
+-
+-directory "/etc/network/interfaces.d" do
+-    owner "root"
+-    group "root"
+-    mode 00755
+-    action :create
+-end
+-
+-bash "setup-interfaces-source" do
+-    user "root"
+-    code <<-EOH
+-        echo "source /etc/network/interfaces.d/iface-*" >> /etc/network/interfaces
+-    EOH
+-    not_if "grep '^source /etc/network/interfaces.d/' /etc/network/interfaces"
+-end
+-
+-[['management', 100], ['storage', 300]].each do |net, metric|
+-    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface']}" do
+-        source "network.iface.erb"
+-        owner "root"
+-        group "root"
+-        mode 00644
+-        variables(
+-            :interface => node['bcpc'][net]['interface'],
+-            :ip => node['bcpc'][net]['ip'],
+-            :netmask => node['bcpc'][net]['netmask'],
+-            :gateway => node['bcpc'][net]['gateway'],
+-            :mtu => node['bcpc'][net]['mtu'],
+-            :metric => metric
+-        )
+-    end
+-
+-end
+-
+-%w{ storage floating }.each do |net|
+-  if not node['bcpc'][net]['interface-parent'].nil?
+-    template "/etc/network/interfaces.d/iface-#{node['bcpc'][net]['interface-parent']}" do
+-      source "network.iface-parent.erb"
+-      owner "root"
+-      group "root"
+-      mode 00644
+-      variables(
+-                :interface => node['bcpc'][net]['interface-parent'],
+-                :mtu => node['bcpc'][net]['mtu'],
+-                )
+-    end
+-  end
+-end
+-
+-# set up the DNS resolvers
+-# we want the VIP which will be running powerdns to be first on the list
+-# but the first entry in our master list is also the only one in pdns,
+-# so make that the last entry to minimize double failures when upstream dies.
+-resolvers=node['bcpc']['dns_servers'].dup
+-resolvers.push resolvers.shift
+-resolvers.unshift node['bcpc']['management']['vip']
+-
+-template "/etc/network/interfaces.d/iface-#{node['bcpc']['floating']['interface']}" do
+-    source "network.iface.erb"
+-    owner "root"
+-    group "root"
+-    mode 00644
+-    variables(
+-        :interface => node['bcpc']['floating']['interface'],
+-        :ip => node['bcpc']['floating']['ip'],
+-        :netmask => node['bcpc']['floating']['netmask'],
+-        :gateway => node['bcpc']['floating']['gateway'],
+-        :dns => resolvers,
+-        :mtu => node['bcpc']['floating']['mtu'],
+-        :metric => 200
+-    )
+-end
+-
+-dhcp_resolvconf_hook="/etc/dhcp/dhclient-enter-hooks.d/resolvconf"
+-bash "disable-dhclient-resolvconf-enter-hook" do
+-    user "root"
+-    code <<-EOH
+-        gzip #{dhcp_resolvconf_hook}
+-        resolvconf --enable-updates
+-        resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
+-    EOH
+-    only_if { ::File.exists?(dhcp_resolvconf_hook) }
+-end
+-
+-bash "interface-mgmt-make-static-if-dhcp" do
+-    user "root"
+-    code <<-EOH
+-        sed --in-place '/\\(.*#{node['bcpc']['management']['interface']}.*\\)/d' /etc/network/interfaces
+-        resolvconf -d #{node['bcpc']['management']['interface']}.dhclient
+-    EOH
+-    only_if "cat /etc/network/interfaces | grep #{node['bcpc']['management']['interface']} | grep dhcp"
+-end
+-
+-%w{ management storage floating }.each do |iface|
+-
+-  if not node['bcpc'][iface]['interface-parent'].nil?
+-    bash "#{iface} up" do
+-      user "root"
+-      code <<-EOH
+-            ifup #{node['bcpc'][iface]['interface-parent']}
+-        EOH
+-      not_if "ip link show up | grep #{node['bcpc'][iface]['interface-parent']} | grep -v #{node['bcpc'][iface]['interface']}"
+-    end
+-    if node['bcpc'][iface]['mtu']
+-        execute "set-#{iface}-mtu" do
+-            command "ifconfig #{node['bcpc'][iface]['interface-parent']} mtu #{node['bcpc'][iface]['mtu']} up"
+-            not_if  "ifconfig #{node['bcpc'][iface]['interface-parent']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
+-        end
+-    end
+-  end
+-
+-    bash "#{iface} up" do
+-        user "root"
+-        code <<-EOH
+-            ifup #{node['bcpc'][iface]['interface']}
+-        EOH
+-        not_if "ip link show up | grep #{node['bcpc'][iface]['interface']}"
+-    end
+-
+-    if node['bcpc'][iface]['mtu']
+-        execute "set-#{iface}-mtu" do
+-            command "ifconfig #{node['bcpc'][iface]['interface']} mtu #{node['bcpc'][iface]['mtu']} up"
+-            not_if  "ifconfig #{node['bcpc'][iface]['interface']} | grep MTU:#{node['bcpc'][iface]['mtu']}"
+-        end
+-    end
+-
+-end
+-
+-bash "routing-management" do
+-    user "root"
+-    code "echo '1 mgmt' >> /etc/iproute2/rt_tables"
+-    not_if "grep -e '^1 mgmt' /etc/iproute2/rt_tables"
+-end
+-
+-bash "routing-storage" do
+-    user "root"
+-    code "echo '2 storage' >> /etc/iproute2/rt_tables"
+-    not_if "grep -e '^2 storage' /etc/iproute2/rt_tables"
+-end
+-
+-if node["roles"].include? "BCPC-Monitoring"
+-    # ipset is used to maintain largish block(s) of IP addresses to be referred to
+-    # by iptables
+-    package "ipset"
+-
+-    bash "create-ipset-lists" do
+-        user "root"
+-        code <<-EOH
+-            ipset list monitoring-clients >/dev/null || ipset create monitoring-clients hash:ip
+-        EOH
+-    end
+-
+-    # Stage monitoring-clients ipset, and swap if lists have changed
+-    template "/tmp/ipset-monitoring-clients" do
+-        mode 00600
+-        source "ipset-monitoring-clients.erb"
+-        variables(
+-            :clients => node['bcpc']['monitoring']['external_clients'].sort
+-        )
+-        notifies :run, "bash[apply-ipset-monitoring-clients]", :immediately
+-    end
+-
+-    bash "apply-ipset-monitoring-clients" do
+-        action :nothing
+-        user "root"
+-        code <<-EOH
+-            ipset restore -f /tmp/ipset-monitoring-clients
+-            ipset swap monitoring-clients-staging monitoring-clients
+-            ipset destroy monitoring-clients-staging
+-        EOH
+-    end
+-end
+-
+-%w{ routing firewall }.each do |function|
+-    template "/etc/network/if-up.d/bcpc-#{function}" do
+-        mode 00775
+-        source "bcpc-#{function}.erb"
+-        notifies :run, "execute[run-#{function}-script-once]", :immediately
+-    end
+-
+-    execute "run-#{function}-script-once" do
+-        action :nothing
+-        command "/etc/network/if-up.d/bcpc-#{function}"
+-    end
+-end
+-
+-
+-bash "disable-noninteractive-pam-logging" do
+-    user "root"
+-    code "sed --in-place 's/^\\(session\\s*required\\s*pam_unix.so\\)/#\\1/' /etc/pam.d/common-session-noninteractive"
+-    only_if "grep -e '^session\\s*required\\s*pam_unix.so' /etc/pam.d/common-session-noninteractive"
+-end
+-
+-include_recipe "bcpc::apache2"
+diff --git a/cookbooks/bcpc/recipes/neutron-common.rb b/cookbooks/bcpc/recipes/neutron-common.rb
+new file mode 100644
+index 0000000..fbd46f5
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/neutron-common.rb
+@@ -0,0 +1,74 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: neutron-common
++#
++# Copyright 2015, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++include_recipe "bcpc::openstack"
++
++ruby_block "initialize-neutron-config" do
++  block do
++    make_config('mysql-neutron-user', "neutron")
++    make_config('mysql-neutron-password', secure_password)
++  end
++end
++
++package 'neutron-common' do
++  action :upgrade
++  options "-o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold'"
++end
++
++%w{/etc/neutron /etc/neutron/plugins/ml2}.each do |d|
++  directory d do
++    owner 'neutron'
++    group 'neutron'
++    mode 00700
++    recursive true
++  end
++end
++
++template '/etc/neutron/neutron.conf' do
++  source 'neutron.conf.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++  variables(
++    lazy {
++      {
++        :headnodes => get_head_nodes,
++        :servers   => get_all_nodes
++      }
++    }
++  )
++end
++
++template '/etc/neutron/plugins/ml2/ml2_conf.ini' do
++  source 'neutron.ml2_conf.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++link '/etc/neutron/plugin.ini' do
++  to '/etc/neutron/plugins/ml2/ml2_conf.ini'
++end
++
++#template "/etc/neutron/plugins/openvswitch/ovs_neutron_plugin.ini" do
++#  source "neutron.ovs_neutron_plugin.ini.erb"
++#  owner "neutron"
++#  group "neutron"
++#  mode 00600
++#end
+diff --git a/cookbooks/bcpc/recipes/neutron-head.rb b/cookbooks/bcpc/recipes/neutron-head.rb
+new file mode 100644
+index 0000000..976188c
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/neutron-head.rb
+@@ -0,0 +1,55 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: neutron-head
++#
++# Copyright 2015, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++include_recipe "bcpc::neutron-common"
++
++ruby_block "neutron-database-creation" do
++  block do
++    %x[ export MYSQL_PWD=#{get_config('mysql-root-password')};
++        mysql -uroot -e "CREATE DATABASE #{node['bcpc']['dbname']['neutron']};"
++        mysql -uroot -e "GRANT ALL ON #{node['bcpc']['dbname']['neutron']}.* TO '#{get_config('mysql-neutron-user')}'@'%' IDENTIFIED BY '#{get_config('mysql-neutron-password')}';"
++        mysql -uroot -e "GRANT ALL ON #{node['bcpc']['dbname']['neutron']}.* TO '#{get_config('mysql-neutron-user')}'@'localhost' IDENTIFIED BY '#{get_config('mysql-neutron-password')}';"
++        mysql -uroot -e "FLUSH PRIVILEGES;"
++    ]
++    self.notifies :run, "bash[neutron-database-sync]", :immediately
++    self.resolve_notification_references
++  end
++  not_if { system "MYSQL_PWD=#{get_config('mysql-root-password')} mysql -uroot -e 'SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = \"#{node['bcpc']['dbname']['neutron']}\"'|grep \"#{node['bcpc']['dbname']['neutron']}\" >/dev/null" }
++end
++
++package 'neutron-server' do
++  action :upgrade
++  options "-o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold'"
++end
++
++service 'neutron-server' do
++  action [:enable, :start]
++  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
++  subscribes :restart, "template[/etc/neutron/plugins/ml2/ml2_conf.ini]", :delayed
++  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
++end
++
++bash "neutron-database-sync" do
++  action :nothing
++  user "root"
++  code "neutron-db-manage upgrade heads"
++end
++
++include_recipe "bcpc::neutron-work"
++#include_recipe "bcpc::neutron-setup"
+diff --git a/cookbooks/bcpc/recipes/neutron-setup.rb b/cookbooks/bcpc/recipes/neutron-setup.rb
+new file mode 100644
+index 0000000..638ce86
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/neutron-setup.rb
+@@ -0,0 +1,37 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: neutron-setup
++#
++# Copyright 2016, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++# this runs a block of commands to set up internal/external network for convenience
++# (hardcoded IPs rather than using attributes because this was literally a copy and paste from my notes)
++# because Neutron support is highly experimental, it will only run if the lock file is not in place
++# to re-run the block, remove the lockfile and rechef
++
++bash "set-up-neutron-networks" do
++  code <<-EOH
++    neutron net-create --router:external --provider:network_type flat --provider:physical_network ext-net1 external-network
++    neutron subnet-create --allocation-pool start=192.168.100.129,end=192.168.100.254 --gateway 192.168.100.1 --disable-dhcp external-network 192.168.100.0/24
++    neutron net-create --provider:network_type vxlan AdminTenant-network
++    neutron subnet-create --name AdminTenant-subnet --enable-dhcp --gateway 1.127.0.1 AdminTenant-network 1.127.0.0/25
++    neutron router-create AdminTenant-router
++    neutron router-interface-add AdminTenant-router AdminTenant-subnet
++    neutron router-gateway-set AdminTenant-router external-network
++    touch /usr/local/etc/dont_recreate_neutron_networks
++  EOH
++  not_if { ::File.exists? '/usr/local/etc/dont_recreate_neutron_networks' }
++end
+diff --git a/cookbooks/bcpc/recipes/neutron-work.rb b/cookbooks/bcpc/recipes/neutron-work.rb
+new file mode 100644
+index 0000000..0ea1c99
+--- /dev/null
++++ b/cookbooks/bcpc/recipes/neutron-work.rb
+@@ -0,0 +1,98 @@
++#
++# Cookbook Name:: bcpc
++# Recipe:: neutron-work
++#
++# Copyright 2015, Bloomberg Finance L.P.
++#
++# Licensed under the Apache License, Version 2.0 (the "License");
++# you may not use this file except in compliance with the License.
++# You may obtain a copy of the License at
++#
++# http://www.apache.org/licenses/LICENSE-2.0
++#
++# Unless required by applicable law or agreed to in writing, software
++# distributed under the License is distributed on an "AS IS" BASIS,
++# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++# See the License for the specific language governing permissions and
++# limitations under the License.
++#
++
++include_recipe "bcpc::neutron-common"
++
++template '/etc/neutron/plugins/ml2/ml2_conf.ini' do
++  source 'neutron.ml2_conf.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++link '/etc/neutron/plugin.ini' do
++  to '/etc/neutron/plugins/ml2/ml2_conf.ini'
++end
++
++template '/etc/neutron/dhcp_agent.ini' do
++  source 'neutron.dhcp_agent.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++template '/etc/neutron/metadata_agent.ini' do
++  source 'neutron.metadata_agent.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++template '/etc/neutron/l3_agent.ini' do
++  source 'neutron.l3_agent.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++template '/etc/neutron/fwaas_driver.ini' do
++  source 'neutron.fwaas_driver.ini.erb'
++  owner 'neutron'
++  group 'neutron'
++  mode 00600
++end
++
++#%w{neutron-dhcp-agent neutron-metadata-agent neutron-plugin-ml2 neutron-plugin-linuxbridge-agent neutron-l3-agent}.each do |pkg|
++%w{neutron-dhcp-agent neutron-metadata-agent neutron-plugin-ml2}.each do |pkg|
++  package pkg do
++    action :upgrade
++    options "-o Dpkg::Options::='--force-confdef' -o Dpkg::Options::='--force-confold'"
++  end
++end
++
++#service 'neutron-plugin-linuxbridge-agent' do
++#  action [:enable, :start]
++#  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
++#  subscribes :restart, "template[/etc/neutron/plugins/ml2/ml2_conf.ini]", :delayed
++#  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
++#end
++
++# calico-dhcp-agent is used instead
++# but installing neutron-dhcp-agent is still required
++#service 'neutron-dhcp-agent' do
++#  action [:enable, :start]
++#  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
++#  subscribes :restart, "template[/etc/neutron/dhcp_agent.ini]", :delayed
++#  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
++#end
++
++#service 'neutron-l3-agent' do
++#  action [:enable, :start]
++#  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
++#  subscribes :restart, "template[/etc/neutron/l3_agent.ini]", :delayed
++#  subscribes :restart, "template[/etc/neutron/fwaas_driver.ini]", :delayed
++#  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
++#end
++
++service 'neutron-metadata-agent' do
++  action [:enable, :start]
++  subscribes :restart, "template[/etc/neutron/neutron.conf]", :delayed
++  subscribes :restart, "template[/etc/neutron/metadata_agent.ini]", :delayed
++  subscribes :restart, "template[/etc/neutron/policy.json]", :delayed
++end
+diff --git a/cookbooks/bcpc/recipes/nova-common.rb b/cookbooks/bcpc/recipes/nova-common.rb
+index 7050f17..e1334bc 100644
+--- a/cookbooks/bcpc/recipes/nova-common.rb
++++ b/cookbooks/bcpc/recipes/nova-common.rb
+@@ -45,7 +45,7 @@ template "/etc/nova/nova.conf" do
+ end
+ 
+ template "/etc/nova/api-paste.ini" do
+-    source "nova.api-paste.ini.erb"
++    source "nova.#{node['bcpc']['openstack_release']}.api-paste.ini.erb"
+     owner "nova"
+     group "nova"
+     mode 00600
+diff --git a/cookbooks/bcpc/recipes/nova-setup.rb b/cookbooks/bcpc/recipes/nova-setup.rb
+index 6c5e06a..9e98fba 100644
+--- a/cookbooks/bcpc/recipes/nova-setup.rb
++++ b/cookbooks/bcpc/recipes/nova-setup.rb
+@@ -20,66 +20,70 @@
+ include_recipe "bcpc::keystone"
+ include_recipe "bcpc::nova-head"
+ 
+-# spin until nova starts to respond, avoids blowing up on an HTTP 503
+-# if Apache was restarted recently and is not yet ready
+-bash "wait-for-nova-to-become-operational" do
+-  code ". /root/adminrc; until nova secgroup-list >/dev/null 2>&1; do sleep 1; done"
+-  timeout 30
+-end
++unless node['bcpc']['enabled']['neutron']
+ 
++  unless node['bcpc']['enabled']['neutron']
++      # spin until nova starts to respond, avoids blowing up on an HTTP 503
++      # if Apache was restarted recently and is not yet ready
++      bash "wait-for-nova-to-become-operational" do
++          code ". /root/adminrc; until nova secgroup-list >/dev/null 2>&1; do sleep 1; done"
++          timeout 30
++      end
+ 
+-bash "nova-configure-default-icmp-secgroup-rule" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova secgroup-add-default-rule icmp -1 -1 0.0.0.0/0
+-    EOH
+-    not_if ". /root/adminrc; nova secgroup-list-default-rules | grep icmp"
+-end
++      bash "nova-configure-default-icmp-secgroup-rule" do
++          user "root"
++          code <<-EOH
++            . /root/adminrc
++            nova secgroup-add-default-rule icmp -1 -1 0.0.0.0/0
++            EOH
++            not_if ". /root/adminrc; nova secgroup-list-default-rules | grep icmp"
++        end
+ 
+-bash "nova-configure-default-ssh-secgroup-rule" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova secgroup-add-default-rule tcp 22 22 0.0.0.0/0
+-    EOH
+-    not_if ". /root/adminrc; nova secgroup-list-default-rules | grep tcp | grep 22"
+-end
++      bash "nova-configure-default-ssh-secgroup-rule" do
++          user "root"
++          code <<-EOH
++              . /root/adminrc
++              nova secgroup-add-default-rule tcp 22 22 0.0.0.0/0
++          EOH
++          not_if ". /root/adminrc; nova secgroup-list-default-rules | grep tcp | grep 22"
++      end
+ 
+-# AdminTenant will already exist, so the above default rules will not
+-# have been loaded into that tenancy, so replicate them explicitly
+-bash "nova-apply-default-icmp-secgroup-rule" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
+-    EOH
+-    not_if ". /root/adminrc; nova secgroup-list-rules default | grep icmp"
+-end
++      # AdminTenant will already exist, so the above default rules will not
++      # have been loaded into that tenancy, so replicate them explicitly
++      bash "nova-apply-default-icmp-secgroup-rule" do
++          user "root"
++          code <<-EOH
++              . /root/adminrc
++              nova secgroup-add-rule default icmp -1 -1 0.0.0.0/0
++          EOH
++          not_if ". /root/adminrc; nova secgroup-list-rules default | grep icmp"
++      end
+ 
+-bash "nova-apply-default-ssh-secgroup-rule" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova secgroup-add-rule default tcp  22 22 0.0.0.0/0
+-    EOH
+-    not_if ". /root/adminrc; nova secgroup-list-rules default | grep tcp | grep 22"
+-end
++      bash "nova-apply-default-ssh-secgroup-rule" do
++          user "root"
++          code <<-EOH
++              . /root/adminrc
++              nova secgroup-add-rule default tcp  22 22 0.0.0.0/0
++          EOH
++          not_if ". /root/adminrc; nova secgroup-list-rules default | grep tcp | grep 22"
++      end
+ 
+-bash "nova-floating-add" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova-manage floating create --ip_range=#{node['bcpc']['floating']['available_subnet']} --pool #{node['bcpc']['region_name']}
+-    EOH
+-    only_if ". /root/adminrc; nova-manage floating list | grep \"No floating IP addresses have been defined\""
+-end
++      bash "nova-floating-add" do
++          user "root"
++          code <<-EOH
++              . /root/adminrc
++              nova-manage floating create --ip_range=#{node['bcpc']['floating']['available_subnet']} --pool #{node['bcpc']['region_name']}
++          EOH
++          only_if ". /root/adminrc; nova-manage floating list | grep \"No floating IP addresses have been defined\""
++      end
+ 
+-bash "nova-fixed-add" do
+-    user "root"
+-    code <<-EOH
+-        . /root/adminrc
+-        nova-manage network create --label fixed --fixed_range_v4=#{node['bcpc']['fixed']['cidr']} --num_networks=#{node['bcpc']['fixed']['num_networks']} --multi_host=T --network_size=#{node['bcpc']['fixed']['network_size']} --vlan_start=#{node['bcpc']['fixed']['vlan_start']} --bridge_interface=#{node['bcpc']['fixed']['vlan_interface']}
+-    EOH
+-    only_if ". /root/adminrc; nova-manage network list | grep \"No networks found\""
++      bash "nova-fixed-add" do
++          user "root"
++          code <<-EOH
++              . /root/adminrc
++              nova-manage network create --label fixed --fixed_range_v4=#{node['bcpc']['fixed']['cidr']} --num_networks=#{node['bcpc']['fixed']['num_networks']} --multi_host=T --network_size=#{node['bcpc']['fixed']['network_size']} --vlan_start=#{node['bcpc']['fixed']['vlan_start']} --bridge_interface=#{node['bcpc']['fixed']['vlan_interface']}
++          EOH
++          only_if ". /root/adminrc; nova-manage network list | grep \"No networks found\""
++      end
++  end
+ end
+diff --git a/cookbooks/bcpc/recipes/nova-work.rb b/cookbooks/bcpc/recipes/nova-work.rb
+index 5615520..b5796a4 100644
+--- a/cookbooks/bcpc/recipes/nova-work.rb
++++ b/cookbooks/bcpc/recipes/nova-work.rb
+@@ -23,7 +23,12 @@ package "nova-compute-#{node['bcpc']['virt_type']}" do
+     action :upgrade
+ end
+ 
+-%w{nova-api nova-network nova-compute nova-novncproxy}.each do |pkg|
++nova_service_list = %w{nova-api nova-compute nova-novncproxy}
++unless node['bcpc']['enabled']['neutron']
++  nova_service_list += ['nova-network']
++end
++
++nova_service_list.each do |pkg|
+     package pkg do
+         action :upgrade
+     end
+@@ -39,37 +44,39 @@ service "nova-api" do
+     restart_command "service nova-api restart; sleep 5"
+ end
+ 
+-#  _   _  ____ _  __   __  ____   _  _____ ____ _   _
+-# | | | |/ ___| | \ \ / / |  _ \ / \|_   _/ ___| | | |
+-# | | | | |  _| |  \ V /  | |_) / _ \ | || |   | |_| |
+-# | |_| | |_| | |___| |   |  __/ ___ \| || |___|  _  |
+-#  \___/ \____|_____|_|   |_| /_/   \_\_| \____|_| |_|
+-# this patch resolves OpenStack issue #1456321 and BCPC issue #573 -
+-# fixes DHCP server assignment so that each fixed IP subnet gets its gateway
+-# address as its DHCP server by default instead of all subnets getting the
+-# gateway of the lowest subnet
+-#
+-# can be removed for 2015.1.1 - only applies to 2015.1.0
+-cookbook_file "/tmp/nova-network-dhcp-server.patch" do
+-    source "nova-network-dhcp-server.patch"
+-    owner "root"
+-    mode 00644
+-end
+-
+-bash "patch-for-nova-network-dhcp-server-2015.1.0" do
+-    user "root"
+-    code <<-EOH
+-       cd /usr/lib/python2.7/dist-packages
+-       patch -p1 < /tmp/nova-network-dhcp-server.patch
+-       rv=$?
+-       if [ $rv -ne 0 ]; then
+-         echo "Error applying patch ($rv) - aborting!"
+-         exit $rv
+-       fi
+-       cp /tmp/nova-network-dhcp-server.patch .
+-    EOH
+-    only_if "shasum /usr/lib/python2.7/dist-packages/nova/network/manager.py | grep -q '^1da5cc12bc28f97e15e5f0e152d37b548766ee04'"
+-    notifies :restart, "service[nova-api]", :immediately
++unless node['bcpc']['enabled']['neutron']
++  #  _   _  ____ _  __   __  ____   _  _____ ____ _   _
++  # | | | |/ ___| | \ \ / / |  _ \ / \|_   _/ ___| | | |
++  # | | | | |  _| |  \ V /  | |_) / _ \ | || |   | |_| |
++  # | |_| | |_| | |___| |   |  __/ ___ \| || |___|  _  |
++  #  \___/ \____|_____|_|   |_| /_/   \_\_| \____|_| |_|
++  # this patch resolves OpenStack issue #1456321 and BCPC issue #573 -
++  # fixes DHCP server assignment so that each fixed IP subnet gets its gateway
++  # address as its DHCP server by default instead of all subnets getting the
++  # gateway of the lowest subnet
++  #
++  # can be removed for 2015.1.1 - only applies to 2015.1.0
++  cookbook_file "/tmp/nova-network-dhcp-server.patch" do
++      source "nova-network-dhcp-server.patch"
++      owner "root"
++      mode 00644
++  end
++
++  bash "patch-for-nova-network-dhcp-server-2015.1.0" do
++      user "root"
++      code <<-EOH
++         cd /usr/lib/python2.7/dist-packages
++         patch -p1 < /tmp/nova-network-dhcp-server.patch
++         rv=$?
++         if [ $rv -ne 0 ]; then
++           echo "Error applying patch ($rv) - aborting!"
++           exit $rv
++         fi
++         cp /tmp/nova-network-dhcp-server.patch .
++      EOH
++      only_if "shasum /usr/lib/python2.7/dist-packages/nova/network/manager.py | grep -q '^1da5cc12bc28f97e15e5f0e152d37b548766ee04'"
++      notifies :restart, "service[nova-api]", :immediately
++  end
+ end
+ 
+ # backport of a patch to fix OpenStack issue #1484738 and BCPC issue #826
+@@ -284,28 +291,30 @@ bash "patch-for-ip-hostnames-metadata" do
+     notifies :restart, "service[nova-api]", :immediately
+ end
+ 
+-cookbook_file "/tmp/nova_network_linux_net.patch" do
+-    source "nova_network_linux_net.patch"
+-    owner "root"
+-    mode 0644
+-end
+-
+-bash "patch-for-ip-hostnames-networking" do
+-    user "root"
+-    code <<-EOH
+-        cd /usr/lib/python2.7/dist-packages/
+-        cp nova/network/linux_net.py nova/network/linux_net.py.prepatch
+-        patch -p1 < /tmp/nova_network_linux_net.patch
+-        rv=$?
+-        if [ $rv -ne 0 ]; then
+-          echo "Error applying patch ($rv) - aborting!"
+-          exit $rv
+-        fi
+-        cp /tmp/nova_network_linux_net.patch .
+-    EOH
+-    not_if "grep -q 'THIS FILE PATCHED BY BCPC' /usr/lib/python2.7/dist-packages/nova/network/linux_net.py"
+-    notifies :restart, "service[nova-compute]", :immediately
+-    notifies :restart, "service[nova-network]", :immediately
++unless node['bcpc']['enabled']['neutron']
++  cookbook_file "/tmp/nova_network_linux_net.patch" do
++      source "nova_network_linux_net.patch"
++      owner "root"
++      mode 0644
++  end
++
++  bash "patch-for-ip-hostnames-networking" do
++      user "root"
++      code <<-EOH
++          cd /usr/lib/python2.7/dist-packages/
++          cp nova/network/linux_net.py nova/network/linux_net.py.prepatch
++          patch -p1 < /tmp/nova_network_linux_net.patch
++          rv=$?
++          if [ $rv -ne 0 ]; then
++            echo "Error applying patch ($rv) - aborting!"
++            exit $rv
++          fi
++          cp /tmp/nova_network_linux_net.patch .
++      EOH
++      not_if "grep -q 'THIS FILE PATCHED BY BCPC' /usr/lib/python2.7/dist-packages/nova/network/linux_net.py"
++      notifies :restart, "service[nova-compute]", :immediately
++      notifies :restart, "service[nova-network]", :immediately
++  end
+ end
+ 
+ # this patch patches Nova to work correctly if you attempt to boot an instance from
+diff --git a/cookbooks/bcpc/recipes/powerdns.rb b/cookbooks/bcpc/recipes/powerdns.rb
+index c665391..dd8b98c 100644
+--- a/cookbooks/bcpc/recipes/powerdns.rb
++++ b/cookbooks/bcpc/recipes/powerdns.rb
+@@ -256,6 +256,7 @@ if node['bcpc']['enabled']['dns'] then
+       :floating_vip        => node['bcpc']['floating']['vip'],
+       :management_vip      => node['bcpc']['management']['vip'],
+       :monitoring_vip      => node['bcpc']['monitoring']['vip'],
++      :storage_vip         => node['bcpc']['storage']['vip'],
+       :reverse_fixed_zone  => (node['bcpc']['fixed']['reverse_dns_zone'] || calc_reverse_dns_zone(node['bcpc']['fixed']['cidr'])),
+       :reverse_float_zone  => (node['bcpc']['floating']['reverse_dns_zone'] || calc_reverse_dns_zone(node['bcpc']['floating']['cidr'])),
+       :management_zone     => calc_reverse_dns_zone(node['bcpc']['management']['cidr'])
+diff --git a/cookbooks/bcpc/templates/default/apache-radosgw.conf.erb b/cookbooks/bcpc/templates/default/apache-radosgw.conf.erb
+new file mode 100644
+index 0000000..066d9bc
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/apache-radosgw.conf.erb
+@@ -0,0 +1,78 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++NameVirtualHost <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw']}"%>
++
++Listen <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw']}"%>
++Listen <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw_https']}"%>
++
++FastCgiExternalServer /var/www/s3gw.fcgi -socket /var/lib/ceph/radosgw/rgw_fcgi.sock -idle-timeout 60
++
++<VirtualHost  <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw']}"%> >
++        ServerName <%="s3.#{node['bcpc']['cluster_domain']}"%>
++        ServerAlias <%=node['hostname']%>
++        ServerAlias <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw']}"%>
++        ServerAdmin <%=node['bcpc']['admin_email']%>
++        DocumentRoot /var/www
++
++<% if node['bcpc']['enabled']['radosgw_cache'] -%>
++        CacheEnable disk /
++        CacheMaxFileSize <%="#{node['bcpc']['radosgw']['cache_max_file_size']}"%>
++<% end -%>
++
++        RewriteEngine On
++        RewriteRule ^/([a-zA-Z0-9-_.]*)([/]?.*) /s3gw.fcgi?page=$1&params=$2&%{QUERY_STRING} [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
++        <IfModule mod_fastcgi.c>
++                <Directory /var/www>
++                        Options +ExecCGI
++                        AllowOverride All
++                        SetHandler fastcgi-script
++                        Order allow,deny
++                        Allow from all
++                        AuthBasicAuthoritative Off
++                </Directory>
++        </IfModule>
++        AllowEncodedSlashes On
++        ErrorLog /var/log/apache2/rgw_error.log
++        CustomLog /var/log/apache2/rgw_access.log  "%h %l %u %t \"%r\" %>s %I/%O [%D] \"%{Referer}i\" \"%{User-Agent}i\""
++        ServerSignature Off
++</VirtualHost>
++
++NameVirtualHost <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw_https']}"%>
++
++<VirtualHost  <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw_https']}"%> >
++        ServerName <%="s3.#{node['bcpc']['cluster_domain']}"%>
++        ServerAlias <%=node['hostname']%>
++        ServerAlias <%="#{node['bcpc']['storage']['ip']}:#{node['bcpc']['ports']['apache']['radosgw_https']}"%>
++        ServerAdmin <%=node['bcpc']['admin_email']%>
++        DocumentRoot /var/www
++
++<% if node['bcpc']['enabled']['radosgw_cache'] -%>
++        CacheEnable disk /
++        CacheMaxFileSize <%="#{node['bcpc']['radosgw']['cache_max_file_size']}"%>
++<% end -%>
++
++        SSLEngine on
++        SSLCertificateFile /etc/ssl/certs/ssl-bcpc.pem
++        SSLCertificateKeyFile /etc/ssl/private/ssl-bcpc.key
++
++        RewriteEngine On
++        RewriteRule ^/([a-zA-Z0-9-_.]*)([/]?.*) /s3gw.fcgi?page=$1&params=$2&%{QUERY_STRING} [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
++        <IfModule mod_fastcgi.c>
++                <Directory /var/www>
++                        Options +ExecCGI
++                        AllowOverride All
++                        SetHandler fastcgi-script
++                        Order allow,deny
++                        Allow from all
++                        AuthBasicAuthoritative Off
++                </Directory>
++        </IfModule>
++        AllowEncodedSlashes On
++        ErrorLog /var/log/apache2/rgw_error.log
++        CustomLog /var/log/apache2/rgw_access.log combined
++        ServerSignature Off
++</VirtualHost>
+diff --git a/cookbooks/bcpc/templates/default/apparmor-libvirt-qemu.erb b/cookbooks/bcpc/templates/default/apparmor-libvirt-qemu.erb
+index ee47824..77a8f8d 100644
+--- a/cookbooks/bcpc/templates/default/apparmor-libvirt-qemu.erb
++++ b/cookbooks/bcpc/templates/default/apparmor-libvirt-qemu.erb
+@@ -30,6 +30,10 @@
+   owner @{PROC}/*/auxv r,
+   @{PROC}/sys/vm/overcommit_memory r,
+ 
++  /sys/devices/system/node/ r,
++  /sys/devices/system/node/node[0-9]*/meminfo r,
++  /sys/devices/system/cpu/ r,
++
+   # For hostdev access. The actual devices will be added dynamically
+   /sys/bus/usb/devices/ r,
+   /sys/devices/**/usb[0-9]*/** r,
+@@ -140,11 +144,16 @@
+ 
+   # for rbd
+   /etc/ceph/ceph.conf r,
+-  capability mknod,
+-  # for rbd
+-  /var/log/qemu/* rw,
+-  /{,var/}run/ceph/guests/** rw,
++############ THE FOUR LINES BELOW WERE IN THE OLD LIBVIRT APPARMOR CONFIG BUT NOT IN THE NEW ONE
++  #capability mknod,
++  ## for rbd
++  # /var/log/qemu/* rw,
++  # /{,var/}run/ceph/guests/** rw,
++######## END OLD LINES
++  /usr/lib/x86_64-linux-gnu/qemu/block-rbd.so rm,
+ 
++  # for curl
++  /usr/lib/x86_64-linux-gnu/qemu/block-curl.so rm,
+ 
+   # for access to hugepages
+   owner "/run/hugepages/kvm/libvirt/qemu/**" rw,
+@@ -172,6 +181,10 @@
+   # silence refusals to open lttng files (see lp#1432644)
+   deny /dev/shm/lttng-ust-wait-* r,
+ 
++  # allow serial console backed by pts chardev (LP: #1342083)
++  /usr/lib/pt_chown ix,
++  owner @{PROC}/0-9*/fd/ r,
++
+   /usr/{lib,libexec}/qemu-bridge-helper Cx -> qemu_bridge_helper,
+   # child profile for bridge helper process
+   profile qemu_bridge_helper {
+diff --git a/cookbooks/bcpc/templates/default/bcpc-firewall.erb b/cookbooks/bcpc/templates/default/bcpc-firewall.erb
+index dec123a..1da8157 100644
+--- a/cookbooks/bcpc/templates/default/bcpc-firewall.erb
++++ b/cookbooks/bcpc/templates/default/bcpc-firewall.erb
+@@ -76,6 +76,7 @@ iptables-restore <<EOH
+ ## heat-api 8004
+ ## heat-api-cfn 8000
+ ## ceilometer-api 8777
++## neutron 9696
+ -A INPUT -i <%=@node["bcpc"]["management"]["interface"]%> -d <%=@node["bcpc"]["management"]["vip"]%> -p tcp --match multiport --dports <%= @node['bcpc']['management']['firewall_tcp_ports'].join(',') %> -j ACCEPT
+ ## powerdns 53
+ -A INPUT -i <%=@node["bcpc"]["management"]["interface"]%> -d <%=@node["bcpc"]["management"]["vip"]%> -p udp --dport 53 -j ACCEPT
+diff --git a/cookbooks/bcpc/templates/default/bird.conf.erb b/cookbooks/bcpc/templates/default/bird.conf.erb
+new file mode 100644
+index 0000000..1e1dbce
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/bird.conf.erb
+@@ -0,0 +1,65 @@
++
++router id <%=node['bcpc']['management']['ip']%>;
++
++# tell Bird to listen for BGP advertisements only on management interface
++# listen bgp address <%=node['bcpc']['management']['ip']%>
++
++# log "bird.log" all
++
++# We are only going to export routes from Calico interfaces.
++# Currently, 'tap*' is used by the OpenStack implimentation
++# and 'cali*' is used by the docker implimentation.
++# dummy1 is the interface that bare metal "service" addresses
++# should be bound to if they should be exported.
++# This will need to be updated as we add new interface names.
++#
++# Also filter out default, just in case.
++#
++# We should automate the build of this out of variables when
++# we have time.
++
++filter export_bgp {
++  if ( (ifname ~ "tap*") || (ifname ~ "cali*") || (ifname ~ "dummy1") ) then {
++    if  net != 0.0.0.0/0 then accept;
++  }
++  reject;
++}
++
++# Configure synchronization between BIRD's routing tables and the
++# kernel.
++protocol kernel {
++  learn;          # Learn all alien routes from the kernel
++  persist;        # Don't remove routes on bird shutdown
++  scan time 2;    # Scan kernel routing table every 2 seconds
++  import all;
++  graceful restart;
++  export all;     # Default is export none
++}
++
++# Watch interface up/down events.
++protocol device {
++  scan time 2;    # Scan interfaces every 2 seconds
++}
++
++protocol direct {
++   debug all;
++   interface "-dummy0", "dummy1", "eth*", "em*", "en*", "br-mgmt";
++}
++
++<% @servers.each do |server| -%>
++<% if node['hostname'] != server['hostname'] -%>
++<%= "protocol bgp '#{server['hostname']}' {
++  description \"Connection to other hypervisor running Bird\";
++  local as 65001;
++  neighbor #{server['bcpc']['floating']['ip']} as 65001;
++  multihop;
++  import all;
++  graceful restart;
++  export filter export_bgp;
++  next hop self;    # Disable next hop processing and always advertise our
++                    # local address as nexthop
++  source address #{node['bcpc']['floating']['ip']};  # The local address we use for the TCP connection
++}
++"%>
++<% end -%>
++<% end -%>
+diff --git a/cookbooks/bcpc/templates/default/cinder.conf.erb b/cookbooks/bcpc/templates/default/cinder.conf.erb
+index e344182..c3d4474 100644
+--- a/cookbooks/bcpc/templates/default/cinder.conf.erb
++++ b/cookbooks/bcpc/templates/default/cinder.conf.erb
+@@ -13,12 +13,16 @@ allow_availability_zone_fallback=<%= node['bcpc']['cinder']['allow_az_fallback']
+ rootwrap_config = /etc/cinder/rootwrap.conf
+ api_paste_confg = /etc/cinder/api-paste.ini
+ verbose = <%= node['bcpc']['cinder']['verbose'] %>
+-debug = False
++debug = <%= node['bcpc']['cinder']['debug'] %>
+ auth_strategy = keystone
+ state_path = /var/lib/cinder
+ logdir=/var/log/cinder
+ # v1 API is being removed in Liberty
++<% if is_kilo? %>
+ enable_v1_api=true
++<% else %>
++enable_v1_api=false
++<% end %>
+ enable_v2_api=true
+ 
+ # Bind to mgt IP only
+@@ -43,10 +47,13 @@ enabled_backends=<%= node['bcpc']['ceph']['enabled_pools'].map {|type| type.upca
+ #control_exchange = cinder
+ #notification_driver = cinder.openstack.common.notifier.rpc_notifier
+ 
++<%# default quotas in Liberty are set exclusively with cinder quota-class-update %>
++<% if is_kilo? %>
+ # Quotas
+ <% node['bcpc']['cinder']['quota'].each do | key, value| %>
+ quota_<%=key%> = <%= value %>
+ <% end %>
++<% end %>
+ 
+ [oslo_messaging_rabbit]
+ # Rabbit message queue settings
+@@ -70,12 +77,18 @@ idle_timeout=3600
+ 
+ [keystone_authtoken]
+ # cafile = /etc/ssl/certs/ssl-bcpc.pem
++<% if is_kilo? %>
+ auth_uri = <%=node['bcpc']['protocol']['keystone']%>://openstack.<%=node['bcpc']['cluster_domain']%>:5000/v2.0/
++<% else %>
++auth_uri = <%=node['bcpc']['protocol']['keystone']%>://openstack.<%=node['bcpc']['cluster_domain']%>:5000/
++<% end %>
+ #auth_host = <%=node['bcpc']['management']['vip']%>
+ #auth_port = 35357
+ #auth_protocol = <%=node['bcpc']['protocol']['keystone']%>
+ identity_uri = <%=node['bcpc']['protocol']['keystone']%>://openstack.<%=node['bcpc']['cluster_domain']%>:35357
++<% if is_kilo? %>
+ auth_version = v2.0
++<% end %>
+ admin_tenant_name = <%=node['bcpc']['admin_tenant']%>
+ admin_user = <%=get_config('keystone-admin-user')%>
+ admin_password = <%=get_config('keystone-admin-password')%>
+diff --git a/cookbooks/bcpc/templates/default/etcd.conf.erb b/cookbooks/bcpc/templates/default/etcd.conf.erb
+new file mode 100644
+index 0000000..c0d84d6
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/etcd.conf.erb
+@@ -0,0 +1,19 @@
++# vim:set ft=upstart ts=2 et:
++description "etcd"
++author "etcd maintainers"
++
++start on stopped rc RUNLEVEL=[2345]
++stop on runlevel [!2345]
++
++respawn
++
++setuid etcd
++
++env ETCD_DATA_DIR=/var/lib/etcd
++export ETCD_DATA_DIR
++
++<% if node["roles"].include? "BCPC-Headnode" -%>
++exec /usr/bin/etcd --name="<%=node['fqdn']%>" --advertise-client-urls="http://<%=node['bcpc']['management']['ip']%>:2379,http://<%=node['bcpc']['management']['ip']%>:4001" --listen-client-urls="http://<%=node['bcpc']['management']['ip']%>:2379,http://<%=node['bcpc']['management']['ip']%>:4001,http://127.0.0.1:4001,http://127.0.0.1:2379" --listen-peer-urls "http://<%=node['bcpc']['management']['ip']%>:2380" --initial-advertise-peer-urls "http://<%=node['bcpc']['management']['ip']%>:2380" --initial-cluster-token $(uuidgen) --initial-cluster "<%=node['fqdn']%>=http://<%=node['bcpc']['management']['ip']%>:2380" --initial-cluster-state "new"
++<% else %>
++exec /usr/bin/etcd --proxy on --initial-cluster "bcpc-vm1.hypervisor-bcpc.example.com=http://10.0.100.11:2380"
++<% end %>
+diff --git a/cookbooks/bcpc/templates/default/felix.cfg.erb b/cookbooks/bcpc/templates/default/felix.cfg.erb
+new file mode 100644
+index 0000000..aa86a4f
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/felix.cfg.erb
+@@ -0,0 +1,3 @@
++[global]
++EtcdAddr = localhost:4001
++FelixHostname = <%=node['hostname']%>
+diff --git a/cookbooks/bcpc/templates/default/haproxy-head.cfg.erb b/cookbooks/bcpc/templates/default/haproxy-head.cfg.erb
+index 17f679b..ee699e5 100644
+--- a/cookbooks/bcpc/templates/default/haproxy-head.cfg.erb
++++ b/cookbooks/bcpc/templates/default/haproxy-head.cfg.erb
+@@ -101,6 +101,16 @@ listen cinder-api
+   <%= "server #{server['hostname']} #{server['bcpc']['management']['ip']}:8776 check inter 5s rise 1 fall 1" %>
+ <% end -%>
+ 
++listen neutron-api
++  bind <%=node['bcpc']['management']['vip']%>:9696 <%= (node['bcpc']['protocol']['neutron'] == 'https') ? "ssl crt /etc/haproxy/haproxy.pem" : "" %>
++  balance source
++  option tcplog
++  option httpchk GET /
++  http-check expect status 200
++<% @servers.each do |server| -%>
++  <%= "server #{server['hostname']} #{server['bcpc']['management']['ip']}:9696 check inter 5s rise 1 fall 1" %>
++<% end -%>
++
+ listen nova-ec2
+   bind <%=node['bcpc']['management']['vip']%>:8773 <%= (node['bcpc']['protocol']['nova'] == 'https') ? "ssl crt /etc/haproxy/haproxy.pem" : "" %>
+   balance source
+@@ -156,7 +166,11 @@ listen novnc
+   balance source
+   option tcplog
+   option httpchk GET /
++<% if is_kilo? %>
+   http-check expect status 200
++<% else %>
++  http-check expect status 404
++<% end %>
+ <% @servers.each do |server| -%>
+   <%= "server #{server['hostname']} #{server['bcpc']['management']['ip']}:6080 check inter 5s rise 1 fall 1" %>
+ <% end -%>
+diff --git a/cookbooks/bcpc/templates/default/hup_openstack.erb b/cookbooks/bcpc/templates/default/hup_openstack.erb
+index b4062ac..b937341 100644
+--- a/cookbooks/bcpc/templates/default/hup_openstack.erb
++++ b/cookbooks/bcpc/templates/default/hup_openstack.erb
+@@ -18,7 +18,8 @@ for i in apache2 \
+          nova-cert \
+          nova-conductor \
+          nova-consoleauth \
+-         nova-scheduler
++         nova-scheduler \
++         neutron-server
+ do
+     service $i restart
+ done
+@@ -30,7 +31,9 @@ echo "# WORK NODE SERVICES"
+ for i in nova-api \
+          nova-compute \
+          nova-network \
+-         nova-novncproxy
++         nova-novncproxy \
++         calico-dhcp-agent \
++         neutron-metadata-agent
+ do
+     service $i restart
+ done
+diff --git a/cookbooks/bcpc/templates/default/keepalived-head.conf.erb b/cookbooks/bcpc/templates/default/keepalived-head.conf.erb
+index 83c1526..9ed64ee 100644
+--- a/cookbooks/bcpc/templates/default/keepalived-head.conf.erb
++++ b/cookbooks/bcpc/templates/default/keepalived-head.conf.erb
+@@ -65,10 +65,10 @@ vrrp_instance VI2_<%=node['bcpc']['region_name']%> {
+   state     BACKUP
+   nopreempt
+ 
+-  interface <%= node['bcpc']['floating']['interface'] %>
++  interface <%= node['bcpc']['storage']['interface'] %>
+ 
+   virtual_ipaddress {
+-    <%="#{node['bcpc']['floating']['vip']}/#{(node['bcpc']['floating']['cidr'].match /\d+\.\d+\.\d+\.\d+\/(\d+)/)[1].to_i}"%>
++    <%="#{node['bcpc']['storage']['vip']}/#{(node['bcpc']['storage']['cidr'].match /\d+\.\d+\.\d+\.\d+\/(\d+)/)[1].to_i}"%>
+   }
+   authentication {
+     auth_type PASS
+diff --git a/cookbooks/bcpc/templates/default/network.iface.erb b/cookbooks/bcpc/templates/default/network.iface.erb
+index 5338854..c6b052d 100644
+--- a/cookbooks/bcpc/templates/default/network.iface.erb
++++ b/cookbooks/bcpc/templates/default/network.iface.erb
+@@ -5,11 +5,19 @@
+ ################################################
+ 
+ auto <%= @interface %>
+-iface <%= @interface %> inet static
++iface <%= @interface %> inet <%= @type %>
++<% if @ip %>
+  address <%= @ip %>
++<% end %>
++<% if @netmask %>
+  netmask <%= @netmask %>
++<% end %>
++<% if @gateway %>
+  gateway <%= @gateway %>
++<% end %>
++<% if @metric %>
+  metric <%= @metric %>
++<% end %>
+ <% if @mtu %>
+  mtu <%= @mtu %>
+ <% end %>
+diff --git a/cookbooks/bcpc/templates/default/neutron.conf.erb b/cookbooks/bcpc/templates/default/neutron.conf.erb
+new file mode 100644
+index 0000000..f8d9571
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.conf.erb
+@@ -0,0 +1,825 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++[DEFAULT]
++# Print more verbose output (set logging level to INFO instead of default WARNING level).
++verbose = True
++
++# =========Start Global Config Option for Distributed L3 Router===============
++# Setting the "router_distributed" flag to "True" will default to the creation
++# of distributed tenant routers. The admin can override this flag by specifying
++# the type of the router on the create request (admin-only attribute). Default
++# value is "False" to support legacy mode (centralized) routers.
++#
++# router_distributed = False
++#
++# ===========End Global Config Option for Distributed L3 Router===============
++
++# Print debugging output (set logging level to DEBUG instead of default WARNING level).
++debug = True
++
++# Where to store Neutron state files.  This directory must be writable by the
++# user executing the agent.
++# state_path = /var/lib/neutron
++
++# log_format = %(asctime)s %(levelname)8s [%(name)s] %(message)s
++# log_date_format = %Y-%m-%d %H:%M:%S
++
++# use_syslog                           -> syslog
++# log_file and log_dir                 -> log_dir/log_file
++# (not log_file) and log_dir           -> log_dir/{binary_name}.log
++# use_stderr                           -> stderr
++# (not user_stderr) and (not log_file) -> stdout
++# publish_errors                       -> notification system
++
++# use_syslog = False
++# syslog_log_facility = LOG_USER
++
++# use_stderr = True
++# log_file =
++# log_dir =
++
++# publish_errors = False
++
++# Address to bind the API server to
++bind_host = <%= node['bcpc']['management']['ip'] %>
++
++# Port the bind the API server to
++# bind_port = 9696
++
++# Path to the extensions.  Note that this can be a colon-separated list of
++# paths.  For example:
++# api_extensions_path = extensions:/path/to/more/extensions:/even/more/extensions
++# The __path__ of neutron.extensions is appended to this, so if your
++# extensions are in there you don't need to specify them here
++# api_extensions_path =
++
++# (StrOpt) Neutron core plugin entrypoint to be loaded from the
++# neutron.core_plugins namespace. See setup.cfg for the entrypoint names of the
++# plugins included in the neutron source distribution. For compatibility with
++# previous versions, the class name of a plugin can be specified instead of its
++# entrypoint name.
++#
++
++core_plugin = ml2
++# Example: core_plugin = ml2
++
++# (ListOpt) List of service plugin entrypoints to be loaded from the
++# neutron.service_plugins namespace. See setup.cfg for the entrypoint names of
++# the plugins included in the neutron source distribution. For compatibility
++# with previous versions, the class name of a plugin can be specified instead
++# of its entrypoint name.
++#
++
++service_plugins = router,firewall
++# Example: service_plugins = router,firewall,lbaas,vpnaas,metering
++
++# Paste configuration file
++# api_paste_config = api-paste.ini
++
++# (StrOpt) Hostname to be used by the neutron server, agents and services
++# running on this machine. All the agents and services running on this machine
++# must use the same host value.
++# The default value is hostname of the machine.
++#
++# host =
++
++# The strategy to be used for auth.
++# Supported values are 'keystone'(default), 'noauth'.
++# auth_strategy = keystone
++
++# Base MAC address. The first 3 octets will remain unchanged. If the
++# 4h octet is not 00, it will also be used. The others will be
++# randomly generated.
++# 3 octet
++# base_mac = fa:16:3e:00:00:00
++# 4 octet
++# base_mac = fa:16:3e:4f:00:00
++
++# DVR Base MAC address. The first 3 octets will remain unchanged. If the
++# 4th octet is not 00, it will also be used.  The others will be randomly
++# generated. The 'dvr_base_mac' *must* be different from 'base_mac' to
++# avoid mixing them up with MAC's allocated for tenant ports.
++# A 4 octet example would be dvr_base_mac = fa:16:3f:4f:00:00
++# The default is 3 octet
++# dvr_base_mac = fa:16:3f:00:00:00
++
++# Maximum amount of retries to generate a unique MAC address
++# mac_generation_retries = 16
++
++# DHCP Lease duration (in seconds).  Use -1 to
++# tell dnsmasq to use infinite lease times.
++# dhcp_lease_duration = 86400
++
++# Allow sending resource operation notification to DHCP agent
++# dhcp_agent_notification = True
++
++# Enable or disable bulk create/update/delete operations
++# allow_bulk = True
++# Enable or disable pagination
++# allow_pagination = False
++# Enable or disable sorting
++# allow_sorting = False
++# Enable or disable overlapping IPs for subnets
++# Attention: the following parameter MUST be set to False if Neutron is
++# being used in conjunction with nova security groups
++# allow_overlapping_ips = False
++# Ensure that configured gateway is on subnet. For IPv6, validate only if
++# gateway is not a link local address. Deprecated, to be removed during the
++# K release, at which point the check will be mandatory.
++# force_gateway_on_subnet = True
++
++# Default maximum number of items returned in a single response,
++# value == infinite and value < 0 means no max limit, and value must
++# be greater than 0. If the number of items requested is greater than
++# pagination_max_limit, server will just return pagination_max_limit
++# of number of items.
++# pagination_max_limit = -1
++
++# Maximum number of DNS nameservers per subnet
++# max_dns_nameservers = 5
++
++# Maximum number of host routes per subnet
++# max_subnet_host_routes = 20
++
++# Maximum number of fixed ips per port
++# max_fixed_ips_per_port = 5
++
++# Maximum number of routes per router
++# max_routes = 30
++
++# Default Subnet Pool to be used for IPv4 subnet-allocation.
++# Specifies by UUID the pool to be used in case of subnet-create being called
++# without a subnet-pool ID.  The default of None means that no pool will be
++# used unless passed explicitly to subnet create.  If no pool is used, then a
++# CIDR must be passed to create a subnet and that subnet will not be allocated
++# from any pool; it will be considered part of the tenant's private address
++# space.
++# default_ipv4_subnet_pool =
++
++# Default Subnet Pool to be used for IPv6 subnet-allocation.
++# Specifies by UUID the pool to be used in case of subnet-create being
++# called without a subnet-pool ID.  Set to "prefix_delegation"
++# to enable IPv6 Prefix Delegation in a PD-capable environment.
++# See the description for default_ipv4_subnet_pool for more information.
++# default_ipv6_subnet_pool =
++
++# =========== items for MTU selection and advertisement =============
++# Advertise MTU.  If True, effort is made to advertise MTU
++# settings to VMs via network methods (ie. DHCP and RA MTU options)
++# when the network's preferred MTU is known.
++# advertise_mtu = False
++# ======== end of items for MTU selection and advertisement =========
++
++# =========== items for agent management extension =============
++# Seconds to regard the agent as down; should be at least twice
++# report_interval, to be sure the agent is down for good
++# agent_down_time = 75
++# ===========  end of items for agent management extension =====
++
++# =========== items for agent scheduler extension =============
++# Driver to use for scheduling network to DHCP agent
++# network_scheduler_driver = neutron.scheduler.dhcp_agent_scheduler.ChanceScheduler
++# Driver to use for scheduling router to a default L3 agent
++# router_scheduler_driver = neutron.scheduler.l3_agent_scheduler.ChanceScheduler
++# Driver to use for scheduling a loadbalancer pool to an lbaas agent
++# loadbalancer_pool_scheduler_driver = neutron.services.loadbalancer.agent_scheduler.ChanceScheduler
++
++# (StrOpt) Representing the resource type whose load is being reported by
++# the agent.
++# This can be 'networks','subnets' or 'ports'. When specified (Default is networks),
++# the server will extract particular load sent as part of its agent configuration object
++# from the agent report state, which is the number of resources being consumed, at
++# every report_interval.
++# dhcp_load_type can be used in combination with network_scheduler_driver =
++# neutron.scheduler.dhcp_agent_scheduler.WeightScheduler
++# When the network_scheduler_driver is WeightScheduler, dhcp_load_type can
++# be configured to represent the choice for the resource being balanced.
++# Example: dhcp_load_type = networks
++# Values:
++#   networks - number of networks hosted on the agent
++#   subnets -  number of subnets associated with the networks hosted on the agent
++#   ports   -  number of ports associated with the networks hosted on the agent
++# dhcp_load_type = networks
++
++# Allow auto scheduling networks to DHCP agent. It will schedule non-hosted
++# networks to first DHCP agent which sends get_active_networks message to
++# neutron server
++# network_auto_schedule = True
++
++# Allow auto scheduling routers to L3 agent. It will schedule non-hosted
++# routers to first L3 agent which sends sync_routers message to neutron server
++# router_auto_schedule = True
++
++# Allow automatic rescheduling of routers from dead L3 agents with
++# admin_state_up set to True to alive agents.
++# allow_automatic_l3agent_failover = False
++
++# Allow automatic removal of networks from dead DHCP agents with
++# admin_state_up set to True.
++# Networks could then be rescheduled if network_auto_schedule is True
++# allow_automatic_dhcp_failover = True
++
++# Number of DHCP agents scheduled to host a network. This enables redundant
++# DHCP agents for configured networks.
++#######################
++# ERHUDY NOTE: setting this to the number of servers in the cluster allows
++# dnsmasq to launch on every hypervisor (same as nova-network works now)
++#######################
++dhcp_agents_per_network = <%= @servers.length %>
++
++# Enable services on agents with admin_state_up False.
++# If this option is False, when admin_state_up of an agent is turned to
++# False, services on it will be disabled. If this option is True, services
++# on agents with admin_state_up False keep available and manual scheduling
++# to such agents is available. Agents with admin_state_up False are not
++# selected for automatic scheduling regardless of this option.
++# enable_services_on_agents_with_admin_state_down = False
++
++# ===========  end of items for agent scheduler extension =====
++
++# =========== items for l3 extension ==============
++# Enable high availability for virtual routers.
++# l3_ha = False
++#
++# Maximum number of l3 agents which a HA router will be scheduled on. If it
++# is set to 0 the router will be scheduled on every agent.
++# max_l3_agents_per_router = 3
++#
++# Minimum number of l3 agents which a HA router will be scheduled on. The
++# default value is 2.
++# min_l3_agents_per_router = 2
++#
++# CIDR of the administrative network if HA mode is enabled
++# l3_ha_net_cidr = 169.254.192.0/18
++#
++# The network type to use when creating the HA network for an HA router.
++# By default or if empty, the first 'tenant_network_types'
++# is used. This is helpful when the VRRP traffic should use a specific
++# network which not the default one.
++# ha_network_type =
++# Example: ha_network_type = flat
++#
++# The physical network name with which the HA network can be created.
++# ha_network_physical_name =
++# Example: ha_network_physical_name = physnet1
++# =========== end of items for l3 extension =======
++
++# =========== items for metadata proxy configuration ==============
++# User (uid or name) running metadata proxy after its initialization
++# (if empty: agent effective user)
++# metadata_proxy_user =
++
++# Group (gid or name) running metadata proxy after its initialization
++# (if empty: agent effective group)
++# metadata_proxy_group =
++
++# Enable/Disable log watch by metadata proxy, it should be disabled when
++# metadata_proxy_user/group is not allowed to read/write its log file and
++# 'copytruncate' logrotate option must be used if logrotate is enabled on
++# metadata proxy log files. Option default value is deduced from
++# metadata_proxy_user: watch log is enabled if metadata_proxy_user is agent
++# effective user id/name.
++# metadata_proxy_watch_log =
++
++# Location of Metadata Proxy UNIX domain socket
++# metadata_proxy_socket = $state_path/metadata_proxy
++# =========== end of items for metadata proxy configuration ==============
++
++# ========== items for VLAN trunking networks ==========
++# Setting this flag to True will allow plugins that support it to
++# create VLAN transparent networks. This flag has no effect for
++# plugins that do not support VLAN transparent networks.
++# vlan_transparent = False
++# ========== end of items for VLAN trunking networks ==========
++
++# =========== WSGI parameters related to the API server ==============
++# Number of separate worker processes to spawn.  The default, 0, runs the
++# worker thread in the current process.  Greater than 0 launches that number of
++# child processes as workers.  The parent process manages them.
++# api_workers = 0
++
++# Number of separate RPC worker processes to spawn.  The default, 0, runs the
++# worker thread in the current process.  Greater than 0 launches that number of
++# child processes as RPC workers.  The parent process manages them.
++# This feature is experimental until issues are addressed and testing has been
++# enabled for various plugins for compatibility.
++# rpc_workers = 0
++
++# Timeout for client connections socket operations. If an
++# incoming connection is idle for this number of seconds it
++# will be closed. A value of '0' means wait forever. (integer
++# value)
++# client_socket_timeout = 900
++
++# wsgi keepalive option. Determines if connections are allowed to be held open
++# by clients after a request is fulfilled. A value of False will ensure that
++# the socket connection will be explicitly closed once a response has been
++# sent to the client.
++# wsgi_keep_alive = True
++
++# Sets the value of TCP_KEEPIDLE in seconds to use for each server socket when
++# starting API server. Not supported on OS X.
++# tcp_keepidle = 600
++
++# Number of seconds to keep retrying to listen
++# retry_until_window = 30
++
++# Number of backlog requests to configure the socket with.
++# backlog = 4096
++
++# Max header line to accommodate large tokens
++# max_header_line = 16384
++
++# Enable SSL on the API server
++# use_ssl = False
++
++# Certificate file to use when starting API server securely
++# ssl_cert_file = /path/to/certfile
++
++# Private key file to use when starting API server securely
++# ssl_key_file = /path/to/keyfile
++
++# CA certificate file to use when starting API server securely to
++# verify connecting clients. This is an optional parameter only required if
++# API clients need to authenticate to the API server using SSL certificates
++# signed by a trusted CA
++# ssl_ca_file = /path/to/cafile
++# ======== end of WSGI parameters related to the API server ==========
++
++# ======== neutron nova interactions ==========
++# Send notification to nova when port status is active.
++# notify_nova_on_port_status_changes = True
++
++# Send notifications to nova when port data (fixed_ips/floatingips) change
++# so nova can update it's cache.
++# notify_nova_on_port_data_changes = True
++
++# URL for connection to nova (Only supports one nova region currently).
++nova_url = <%= node['bcpc']['protocol']['nova'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:8774/v2/
++
++# Name of nova region to use. Useful if keystone manages more than one region
++# nova_region_name =
++
++# Username for connection to nova in admin context
++nova_admin_username = <%= get_config('keystone-admin-user') %>
++
++# The uuid of the admin nova tenant
++# nova_admin_tenant_id =
++
++# The name of the admin nova tenant. If the uuid of the admin nova tenant
++# is set, this is optional.  Useful for cases where the uuid of the admin
++# nova tenant is not available when configuration is being done.
++nova_admin_tenant_name = <%= node['bcpc']['admin_tenant'] %>
++
++# Password for connection to nova in admin context.
++nova_admin_password = <%= get_config('keystone-admin-password') %>
++
++# Authorization URL for connection to nova in admin context.
++nova_admin_auth_url = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:35357/v2.0/
++
++# CA file for novaclient to verify server certificates
++# nova_ca_certificates_file =
++
++# Boolean to control ignoring SSL errors on the nova url
++# nova_api_insecure = False
++
++# Number of seconds between sending events to nova if there are any events to send
++# send_events_interval = 2
++
++# ======== end of neutron nova interactions ==========
++
++#
++# Options defined in oslo.messaging
++#
++
++# Use durable queues in amqp. (boolean value)
++# Deprecated group/name - [DEFAULT]/rabbit_durable_queues
++# amqp_durable_queues=false
++
++# Auto-delete queues in amqp. (boolean value)
++# amqp_auto_delete=false
++
++# Size of RPC connection pool. (integer value)
++# rpc_conn_pool_size=30
++
++# Qpid broker hostname. (string value)
++# qpid_hostname=localhost
++
++# Qpid broker port. (integer value)
++# qpid_port=5672
++
++# Qpid HA cluster host:port pairs. (list value)
++# qpid_hosts=$qpid_hostname:$qpid_port
++
++# Username for Qpid connection. (string value)
++# qpid_username=
++
++# Password for Qpid connection. (string value)
++# qpid_password=
++
++# Space separated list of SASL mechanisms to use for auth.
++# (string value)
++# qpid_sasl_mechanisms=
++
++# Seconds between connection keepalive heartbeats. (integer
++# value)
++# qpid_heartbeat=60
++
++# Transport to use, either 'tcp' or 'ssl'. (string value)
++# qpid_protocol=tcp
++
++# Whether to disable the Nagle algorithm. (boolean value)
++# qpid_tcp_nodelay=true
++
++# The qpid topology version to use.  Version 1 is what was
++# originally used by impl_qpid.  Version 2 includes some
++# backwards-incompatible changes that allow broker federation
++# to work.  Users should update to version 2 when they are
++# able to take everything down, as it requires a clean break.
++# (integer value)
++# qpid_topology_version=1
++
++# SSL version to use (valid only if SSL enabled). valid values
++# are TLSv1, SSLv23 and SSLv3. SSLv2 may be available on some
++# distributions. (string value)
++# kombu_ssl_version=
++
++# SSL key file (valid only if SSL enabled). (string value)
++# kombu_ssl_keyfile=
++
++# SSL cert file (valid only if SSL enabled). (string value)
++# kombu_ssl_certfile=
++
++# SSL certification authority file (valid only if SSL
++# enabled). (string value)
++# kombu_ssl_ca_certs=
++
++# How long to wait before reconnecting in response to an AMQP
++# consumer cancel notification. (floating point value)
++# kombu_reconnect_delay=1.0
++
++# The RabbitMQ broker address where a single node is used.
++# (string value)
++# rabbit_host=localhost
++
++# The RabbitMQ broker port where a single node is used.
++# (integer value)
++# rabbit_port=5672
++
++# RabbitMQ HA cluster host:port pairs. (list value)
++# rabbit_hosts=$rabbit_host:$rabbit_port
++
++# Connect over SSL for RabbitMQ. (boolean value)
++# rabbit_use_ssl=false
++
++# The RabbitMQ userid. (string value)
++# rabbit_userid=guest
++
++# The RabbitMQ password. (string value)
++# rabbit_password=guest
++
++# the RabbitMQ login method (string value)
++# rabbit_login_method=AMQPLAIN
++
++# The RabbitMQ virtual host. (string value)
++# rabbit_virtual_host=/
++
++# How frequently to retry connecting with RabbitMQ. (integer
++# value)
++# rabbit_retry_interval=1
++
++# How long to backoff for between retries when connecting to
++# RabbitMQ. (integer value)
++# rabbit_retry_backoff=2
++
++# Maximum number of RabbitMQ connection retries. Default is 0
++# (infinite retry count). (integer value)
++# rabbit_max_retries=0
++
++# Use HA queues in RabbitMQ (x-ha-policy: all). If you change
++# this option, you must wipe the RabbitMQ database. (boolean
++# value)
++# rabbit_ha_queues=false
++
++# If passed, use a fake RabbitMQ provider. (boolean value)
++# fake_rabbit=false
++
++# ZeroMQ bind address. Should be a wildcard (*), an ethernet
++# interface, or IP. The "host" option should point or resolve
++# to this address. (string value)
++# rpc_zmq_bind_address=*
++
++# MatchMaker driver. (string value)
++# rpc_zmq_matchmaker=oslo.messaging._drivers.matchmaker.MatchMakerLocalhost
++
++# ZeroMQ receiver listening port. (integer value)
++# rpc_zmq_port=9501
++
++# Number of ZeroMQ contexts, defaults to 1. (integer value)
++# rpc_zmq_contexts=1
++
++# Maximum number of ingress messages to locally buffer per
++# topic. Default is unlimited. (integer value)
++# rpc_zmq_topic_backlog=
++
++# Directory for holding IPC sockets. (string value)
++# rpc_zmq_ipc_dir=/var/run/openstack
++
++# Name of this node. Must be a valid hostname, FQDN, or IP
++# address. Must match "host" option, if running Nova. (string
++# value)
++# rpc_zmq_host=oslo
++
++# Seconds to wait before a cast expires (TTL). Only supported
++# by impl_zmq. (integer value)
++# rpc_cast_timeout=30
++
++# Heartbeat frequency. (integer value)
++# matchmaker_heartbeat_freq=300
++
++# Heartbeat time-to-live. (integer value)
++# matchmaker_heartbeat_ttl=600
++
++# Size of RPC greenthread pool. (integer value)
++# rpc_thread_pool_size=64
++
++# Driver or drivers to handle sending notifications. (multi
++# valued)
++# notification_driver=
++
++# AMQP topic used for OpenStack notifications. (list value)
++# Deprecated group/name - [rpc_notifier2]/topics
++# notification_topics=notifications
++
++# Seconds to wait for a response from a call. (integer value)
++# rpc_response_timeout=60
++
++# A URL representing the messaging driver to use and its full
++# configuration. If not set, we fall back to the rpc_backend
++# option and driver specific configuration. (string value)
++# transport_url=
++
++# The messaging driver to use, defaults to rabbit. Other
++# drivers include qpid and zmq. (string value)
++# rpc_backend=rabbit
++
++# The default exchange under which topics are scoped. May be
++# overridden by an exchange name specified in the
++# transport_url option. (string value)
++# control_exchange=openstack
++
++
++[matchmaker_redis]
++
++#
++# Options defined in oslo.messaging
++#
++
++# Host to locate redis. (string value)
++# host=127.0.0.1
++
++# Use this port to connect to redis host. (integer value)
++# port=6379
++
++# Password for Redis server (optional). (string value)
++# password=
++
++
++[matchmaker_ring]
++
++#
++# Options defined in oslo.messaging
++#
++
++# Matchmaker ring file (JSON). (string value)
++# Deprecated group/name - [DEFAULT]/matchmaker_ringfile
++# ringfile=/etc/oslo/matchmaker_ring.json
++
++[quotas]
++# Default driver to use for quota checks
++# quota_driver = neutron.db.quota_db.DbQuotaDriver
++
++# Resource name(s) that are supported in quota features
++# quota_items = network,subnet,port
++
++# Default number of resource allowed per tenant. A negative value means
++# unlimited.
++# default_quota = -1
++
++# Number of networks allowed per tenant. A negative value means unlimited.
++# quota_network = 10
++
++# Number of subnets allowed per tenant. A negative value means unlimited.
++# quota_subnet = 10
++
++# Number of ports allowed per tenant. A negative value means unlimited.
++# quota_port = 50
++
++# Number of security groups allowed per tenant. A negative value means
++# unlimited.
++# quota_security_group = 10
++
++# Number of security group rules allowed per tenant. A negative value means
++# unlimited.
++# quota_security_group_rule = 100
++
++# Number of vips allowed per tenant. A negative value means unlimited.
++# quota_vip = 10
++
++# Number of pools allowed per tenant. A negative value means unlimited.
++# quota_pool = 10
++
++# Number of pool members allowed per tenant. A negative value means unlimited.
++# The default is unlimited because a member is not a real resource consumer
++# on Openstack. However, on back-end, a member is a resource consumer
++# and that is the reason why quota is possible.
++# quota_member = -1
++
++# Number of health monitors allowed per tenant. A negative value means
++# unlimited.
++# The default is unlimited because a health monitor is not a real resource
++# consumer on Openstack. However, on back-end, a member is a resource consumer
++# and that is the reason why quota is possible.
++# quota_health_monitor = -1
++
++# Number of loadbalancers allowed per tenant. A negative value means unlimited.
++# quota_loadbalancer = 10
++
++# Number of listeners allowed per tenant. A negative value means unlimited.
++# quota_listener = -1
++
++# Number of v2 health monitors allowed per tenant. A negative value means
++# unlimited. These health monitors exist under the lbaas v2 API
++# quota_healthmonitor = -1
++
++# Number of routers allowed per tenant. A negative value means unlimited.
++# quota_router = 10
++
++# Number of floating IPs allowed per tenant. A negative value means unlimited.
++# quota_floatingip = 50
++
++# Number of firewalls allowed per tenant. A negative value means unlimited.
++# quota_firewall = 1
++
++# Number of firewall policies allowed per tenant. A negative value means
++# unlimited.
++# quota_firewall_policy = 1
++
++# Number of firewall rules allowed per tenant. A negative value means
++# unlimited.
++# quota_firewall_rule = 100
++
++[agent]
++# Use "sudo neutron-rootwrap /etc/neutron/rootwrap.conf" to use the real
++# root filter facility.
++# Change to "sudo" to skip the filtering and just run the command directly
++root_helper = sudo neutron-rootwrap /etc/neutron/rootwrap.conf
++
++# Set to true to add comments to generated iptables rules that describe
++# each rule's purpose. (System must support the iptables comments module.)
++# comment_iptables_rules = True
++
++# Root helper daemon application to use when possible.
++# root_helper_daemon =
++
++# Use the root helper when listing the namespaces on a system. This may not
++# be required depending on the security configuration. If the root helper is
++# not required, set this to False for a performance improvement.
++# use_helper_for_ns_read = True
++
++# The interval to check external processes for failure in seconds (0=disabled)
++# check_child_processes_interval = 60
++
++# Action to take when an external process spawned by an agent dies
++# Values:
++#   respawn - Respawns the external process
++#   exit - Exits the agent
++# check_child_processes_action = respawn
++
++# =========== items for agent management extension =============
++# seconds between nodes reporting state to server; should be less than
++# agent_down_time, best if it is half or less than agent_down_time
++# report_interval = 30
++
++# ===========  end of items for agent management extension =====
++
++[keystone_authtoken]
++auth_uri = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:5000/v2.0/
++identity_uri = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:35357
++auth_version = v2.0
++admin_tenant_name = <%= node['bcpc']['admin_tenant'] %>
++admin_user = <%= get_config('keystone-admin-user') %>
++admin_password = <%= get_config('keystone-admin-password') %>
++
++[database]
++# This line MUST be changed to actually run the plugin.
++# Example:
++# connection = mysql://root:pass@127.0.0.1:3306/neutron
++# Replace 127.0.0.1 above with the IP address of the database used by the
++# main neutron server. (Leave it as is if the database runs on this host.)
++# NOTE: In deployment the [database] section and its connection attribute may
++# be set in the corresponding core plugin '.ini' file. However, it is suggested
++# to put the [database] section and its connection attribute in this
++# configuration file.
++connection = mysql://<%= get_config('mysql-neutron-user') %>:<%= get_config('mysql-neutron-password') %>@<%= node['bcpc']['management']['vip'] %>/<%= node['bcpc']['dbname']['neutron'] %>
++
++# Database engine for which script will be generated when using offline
++# migration
++# engine =
++
++# The SQLAlchemy connection string used to connect to the slave database
++# slave_connection =
++
++# Database reconnection retry times - in event connectivity is lost
++# set to -1 implies an infinite retry count
++# max_retries = 10
++
++# Database reconnection interval in seconds - if the initial connection to the
++# database fails
++# retry_interval = 10
++
++# Minimum number of SQL connections to keep open in a pool
++# min_pool_size = 1
++
++# Maximum number of SQL connections to keep open in a pool
++# max_pool_size = 10
++
++# Timeout in seconds before idle sql connections are reaped
++# idle_timeout = 3600
++
++# If set, use this value for max_overflow with sqlalchemy
++# max_overflow = 20
++
++# Verbosity of SQL debugging information. 0=None, 100=Everything
++# connection_debug = 0
++
++# Add python stack traces to SQL as comment strings
++# connection_trace = False
++
++# If set, use this value for pool_timeout with sqlalchemy
++# pool_timeout = 10
++
++[nova]
++# Name of the plugin to load
++# auth_plugin =
++
++# Config Section from which to load plugin specific options
++# auth_section =
++
++# PEM encoded Certificate Authority to use when verifying HTTPs connections.
++# cafile =
++
++# PEM encoded client certificate cert file
++# certfile =
++
++# Verify HTTPS connections.
++# insecure = False
++
++# PEM encoded client certificate key file
++# keyfile =
++
++# Name of nova region to use. Useful if keystone manages more than one region.
++# region_name =
++
++# Timeout value for http requests
++# timeout =
++
++[oslo_concurrency]
++
++# Directory to use for lock files. For security, the specified directory should
++# only be writable by the user running the processes that need locking.
++# Defaults to environment variable OSLO_LOCK_PATH. If external locks are used,
++# a lock path must be set.
++lock_path = $state_path/lock
++
++# Enables or disables inter-process locks.
++# disable_process_locking = False
++
++[oslo_policy]
++
++# The JSON file that defines policies.
++# policy_file = policy.json
++
++# Default rule. Enforced when a requested rule is not found.
++# policy_default_rule = default
++
++# Directories where policy configuration files are stored.
++# They can be relative to any directory in the search path defined by the
++# config_dir option, or absolute paths. The file defined by policy_file
++# must exist for these directories to be searched. Missing or empty
++# directories are ignored.
++# policy_dirs = policy.d
++
++
++[oslo_messaging_rabbit]
++# Rabbit message queue settings
++#rabbit_host=<%=node['bcpc']['management']['vip']%>
++rabbit_hosts=<%=get_shuffled_servers(@headnodes, prefer_local=true).map{|x| x['bcpc']['management']['ip'] + ":5672"}.join(',')%>
++rabbit_password=<%=get_config('rabbitmq-password')%>
++rabbit_ha_queues=True
++heartbeat_timeout_threshold=<%=node['bcpc']['rabbitmq']['heartbeat']%>
++amqp_durable_queues=<%=node['bcpc']['rabbitmq']['durable_queues']%>
+diff --git a/cookbooks/bcpc/templates/default/neutron.dhcp_agent.ini.erb b/cookbooks/bcpc/templates/default/neutron.dhcp_agent.ini.erb
+new file mode 100644
+index 0000000..2f126d6
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.dhcp_agent.ini.erb
+@@ -0,0 +1,94 @@
++[DEFAULT]
++# Show debugging output in log (sets DEBUG log level output)
++debug = True
++
++# The DHCP agent will resync its state with Neutron to recover from any
++# transient notification or rpc errors. The interval is number of
++# seconds between attempts.
++# resync_interval = 5
++
++# The DHCP agent requires an interface driver be set. Choose the one that best
++# matches your plugin.
++# interface_driver =
++
++# Example of interface_driver option for OVS based plugins(OVS, Ryu, NEC, NVP,
++# BigSwitch/Floodlight)
++# interface_driver = neutron.agent.linux.interface.OVSInterfaceDriver
++
++# Name of Open vSwitch bridge to use
++# ovs_integration_bridge = br-int
++
++# Use veth for an OVS interface or not.
++# Support kernels with limited namespace support
++# (e.g. RHEL 6.5) so long as ovs_use_veth is set to True.
++# ovs_use_veth = False
++
++# Example of interface_driver option for LinuxBridge
++# interface_driver = neutron.agent.linux.interface.RoutedInterfaceDriver
++interface_driver = networking_calico.agent.linux.interface.RoutedInterfaceDriver
++
++# The agent can use other DHCP drivers.  Dnsmasq is the simplest and requires
++# no additional setup of the DHCP server.
++# dhcp_driver = neutron.agent.linux.dhcp.Dnsmasq
++dhcp_driver = networking_calico.agent.linux.dhcp.DnsmasqRouted
++
++
++# Allow overlapping IP (Must have kernel build with CONFIG_NET_NS=y and
++# iproute2 package that supports namespaces). This option is deprecated and
++# will be removed in a future release, at which point the old behavior of
++# use_namespaces = True will be enforced.
++# use_namespaces = True
++use_namespaces = False
++
++# The DHCP server can assist with providing metadata support on isolated
++# networks. Setting this value to True will cause the DHCP server to append
++# specific host routes to the DHCP request. The metadata service will only
++# be activated when the subnet does not contain any router port. The guest
++# instance must be configured to request host routes via DHCP (Option 121).
++# enable_isolated_metadata = False
++
++# Allows for serving metadata requests coming from a dedicated metadata
++# access network whose cidr is 169.254.169.254/16 (or larger prefix), and
++# is connected to a Neutron router from which the VMs send metadata
++# request. In this case DHCP Option 121 will not be injected in VMs, as
++# they will be able to reach 169.254.169.254 through a router.
++# This option requires enable_isolated_metadata = True
++enable_metadata_network = True
++
++# Number of threads to use during sync process. Should not exceed connection
++# pool size configured on server.
++# num_sync_threads = 4
++
++# Location to store DHCP server config files
++# dhcp_confs = $state_path/dhcp
++
++# Domain to use for building the hostnames
++# dhcp_domain = openstacklocal
++
++# Override the default dnsmasq settings with this file
++# dnsmasq_config_file =
++
++# Comma-separated list of DNS servers which will be used by dnsmasq
++# as forwarders.
++# dnsmasq_dns_servers =
++
++# Limit number of leases to prevent a denial-of-service.
++# dnsmasq_lease_max = 16777216
++
++# Location to DHCP lease relay UNIX domain socket
++# dhcp_lease_relay_socket = $state_path/dhcp/lease_relay
++
++# Use broadcast in DHCP replies
++# dhcp_broadcast_reply = False
++
++# dhcp_delete_namespaces, which is false by default, can be set to True if
++# namespaces can be deleted cleanly on the host running the dhcp agent.
++# Do not enable this until you understand the problem with the Linux iproute
++# utility mentioned in https://bugs.launchpad.net/neutron/+bug/1052535 and
++# you are sure that your version of iproute does not suffer from the problem.
++# If True, namespaces will be deleted when a dhcp server is disabled.
++dhcp_delete_namespaces = True
++
++# Timeout for ovs-vsctl commands.
++# If the timeout expires, ovs commands will fail with ALARMCLOCK error.
++# ovs_vsctl_timeout = 10
+diff --git a/cookbooks/bcpc/templates/default/neutron.fwaas_driver.ini.erb b/cookbooks/bcpc/templates/default/neutron.fwaas_driver.ini.erb
+new file mode 100644
+index 0000000..cbeff76
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.fwaas_driver.ini.erb
+@@ -0,0 +1,3 @@
++[fwaas]
++driver = neutron_fwaas.services.firewall.drivers.linux.iptables_fwaas.IptablesFwaasDriver
++enabled = True
+diff --git a/cookbooks/bcpc/templates/default/neutron.l3_agent.ini.erb b/cookbooks/bcpc/templates/default/neutron.l3_agent.ini.erb
+new file mode 100644
+index 0000000..6795f9c
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.l3_agent.ini.erb
+@@ -0,0 +1,122 @@
++[DEFAULT]
++# Show debugging output in log (sets DEBUG log level output)
++debug = True
++
++# L3 requires that an interface driver be set. Choose the one that best
++# matches your plugin.
++# interface_driver =
++
++# Example of interface_driver option for OVS based plugins (OVS, Ryu, NEC)
++# that supports L3 agent
++# interface_driver = neutron.agent.linux.interface.OVSInterfaceDriver
++
++# Use veth for an OVS interface or not.
++# Support kernels with limited namespace support
++# (e.g. RHEL 6.5) so long as ovs_use_veth is set to True.
++# ovs_use_veth = False
++
++# Example of interface_driver option for LinuxBridge
++interface_driver = neutron.agent.linux.interface.BridgeInterfaceDriver
++
++# Allow overlapping IP (Must have kernel build with CONFIG_NET_NS=y and
++# iproute2 package that supports namespaces). This option is deprecated and
++# will be removed in a future release, at which point the old behavior of
++# use_namespaces = True will be enforced.
++# use_namespaces = True
++
++# If use_namespaces is set as False then the agent can only configure one router.
++
++# This is done by setting the specific router_id.
++# router_id =
++
++# When external_network_bridge is set, each L3 agent can be associated
++# with no more than one external network. This value should be set to the UUID
++# of that external network. To allow L3 agent support multiple external
++# networks, both the external_network_bridge and gateway_external_network_id
++# must be left empty.
++# gateway_external_network_id =
++
++# With IPv6, the network used for the external gateway does not need
++# to have an associated subnet, since the automatically assigned
++# link-local address (LLA) can be used. However, an IPv6 gateway address
++# is needed for use as the next-hop for the default route. If no IPv6
++# gateway address is configured here, (and only then) the neutron router
++# will be configured to get its default route from router advertisements (RAs)
++# from the upstream router; in which case the upstream router must also be
++# configured to send these RAs.
++# The ipv6_gateway, when configured, should be the LLA of the interface
++# on the upstream router. If a next-hop using a global unique address (GUA)
++# is desired, it needs to be done via a subnet allocated to the network
++# and not through this parameter.
++# ipv6_gateway =
++
++# Indicates that this L3 agent should also handle routers that do not have
++# an external network gateway configured.  This option should be True only
++# for a single agent in a Neutron deployment, and may be False for all agents
++# if all routers must have an external network gateway
++# handle_internal_only_routers = True
++
++# Name of bridge used for external network traffic. This should be set to
++# empty value for the linux bridge. when this parameter is set, each L3 agent
++# can be associated with no more than one external network.
++# external_network_bridge = br-ex
++external_network_bridge = 
++
++# TCP Port used by Neutron metadata server
++# metadata_port = 9697
++
++# Send this many gratuitous ARPs for HA setup. Set it below or equal to 0
++# to disable this feature.
++# send_arp_for_ha = 3
++
++# seconds between re-sync routers' data if needed
++# periodic_interval = 40
++
++# seconds to start to sync routers' data after
++# starting agent
++# periodic_fuzzy_delay = 5
++
++# enable_metadata_proxy, which is true by default, can be set to False
++# if the Nova metadata server is not available
++# enable_metadata_proxy = True
++
++# Iptables mangle mark used to mark metadata valid requests
++# metadata_access_mark = 0x1
++
++# Iptables mangle mark used to mark ingress from external network
++# external_ingress_mark = 0x2
++
++# router_delete_namespaces, which is false by default, can be set to True if
++# namespaces can be deleted cleanly on the host running the L3 agent.
++# Do not enable this until you understand the problem with the Linux iproute
++# utility mentioned in https://bugs.launchpad.net/neutron/+bug/1052535 and
++# you are sure that your version of iproute does not suffer from the problem.
++# If True, namespaces will be deleted when a router is destroyed.
++# router_delete_namespaces = False
++
++# Timeout for ovs-vsctl commands.
++# If the timeout expires, ovs commands will fail with ALARMCLOCK error.
++# ovs_vsctl_timeout = 10
++
++# The working mode for the agent. Allowed values are:
++# - legacy: this preserves the existing behavior where the L3 agent is
++#   deployed on a centralized networking node to provide L3 services
++#   like DNAT, and SNAT. Use this mode if you do not want to adopt DVR.
++# - dvr: this mode enables DVR functionality, and must be used for an L3
++#   agent that runs on a compute host.
++# - dvr_snat: this enables centralized SNAT support in conjunction with
++#   DVR. This mode must be used for an L3 agent running on a centralized
++#   node (or in single-host deployments, e.g. devstack).
++# agent_mode = legacy
++
++# Location to store keepalived and all HA configurations
++# ha_confs_path = $state_path/ha_confs
++
++# VRRP authentication type AH/PASS
++# ha_vrrp_auth_type = PASS
++
++# VRRP authentication password
++# ha_vrrp_auth_password =
++
++# The advertisement interval in seconds
++# ha_vrrp_advert_int = 2
+diff --git a/cookbooks/bcpc/templates/default/neutron.metadata_agent.ini.erb b/cookbooks/bcpc/templates/default/neutron.metadata_agent.ini.erb
+new file mode 100644
+index 0000000..4e17c9d
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.metadata_agent.ini.erb
+@@ -0,0 +1,70 @@
++[DEFAULT]
++# Show debugging output in log (sets DEBUG log level output)
++# debug = True
++
++# The Neutron user information for accessing the Neutron API.
++auth_url = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:5000/v2.0/
++identity_uri = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:35357
++auth_version = v2.0
++admin_tenant_name = <%= node['bcpc']['admin_tenant'] %>
++admin_user = <%= get_config('keystone-admin-user') %>
++admin_password = <%= get_config('keystone-admin-password') %>
++
++# Turn off verification of the certificate for ssl
++# auth_insecure = False
++# Certificate Authority public key (CA cert) file for ssl
++# auth_ca_cert =
++
++# Network service endpoint type to pull from the keystone catalog
++# endpoint_type = adminURL
++
++# IP address used by Nova metadata server
++nova_metadata_ip = <%= node['bcpc']['management']['ip'] %>
++
++# TCP Port used by Nova metadata server
++# nova_metadata_port = 8775
++
++# Which protocol to use for requests to Nova metadata server, http or https
++# nova_metadata_protocol = http
++
++# Whether insecure SSL connection should be accepted for Nova metadata server
++# requests
++# nova_metadata_insecure = False
++
++# Client certificate for nova api, needed when nova api requires client
++# certificates
++# nova_client_cert =
++
++# Private key for nova client certificate
++# nova_client_priv_key =
++
++# When proxying metadata requests, Neutron signs the Instance-ID header with a
++# shared secret to prevent spoofing.  You may select any string for a secret,
++# but it must match here and in the configuration used by the Nova Metadata
++# Server. NOTE: Nova uses the same config key, but in [neutron] section.
++# metadata_proxy_shared_secret =
++
++# Location of Metadata Proxy UNIX domain socket
++# metadata_proxy_socket = $state_path/metadata_proxy
++
++# Metadata Proxy UNIX domain socket mode, 3 values allowed:
++# 'deduce': deduce mode from metadata_proxy_user/group values,
++# 'user': set metadata proxy socket mode to 0o644, to use when
++# metadata_proxy_user is agent effective user or root,
++# 'group': set metadata proxy socket mode to 0o664, to use when
++# metadata_proxy_group is agent effective group,
++# 'all': set metadata proxy socket mode to 0o666, to use otherwise.
++# metadata_proxy_socket_mode = deduce
++
++# Number of separate worker processes for metadata server. Defaults to
++# half the number of CPU cores
++# metadata_workers =
++
++# Number of backlog requests to configure the metadata server socket with
++# metadata_backlog = 4096
++
++# URL to connect to the cache backend.
++# default_ttl=0 parameter will cause cache entries to never expire.
++# Otherwise default_ttl specifies time in seconds a cache entry is valid for.
++# No cache is used in case no value is passed.
++# cache_url = memory://?default_ttl=5
+diff --git a/cookbooks/bcpc/templates/default/neutron.ml2_conf.ini.erb b/cookbooks/bcpc/templates/default/neutron.ml2_conf.ini.erb
+new file mode 100644
+index 0000000..e7a9907
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.ml2_conf.ini.erb
+@@ -0,0 +1,121 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++[ml2]
++# (ListOpt) List of network type driver entrypoints to be loaded from
++# the neutron.ml2.type_drivers namespace.
++#
++# type_drivers = local,flat,vlan,gre,vxlan
++# Example: type_drivers = flat,vlan,gre,vxlan
++
++type_drivers = local,flat
++
++# (ListOpt) Ordered list of network_types to allocate as tenant
++# networks. The default value 'local' is useful for single-box testing
++# but provides no connectivity between hosts.
++#
++# tenant_network_types = local
++# Example: tenant_network_types = vlan,gre,vxlan
++
++tenant_network_types = local
++
++# (ListOpt) Ordered list of networking mechanism driver entrypoints
++# to be loaded from the neutron.ml2.mechanism_drivers namespace.
++# mechanism_drivers =
++# Example: mechanism_drivers = openvswitch,mlnx
++# Example: mechanism_drivers = arista
++# Example: mechanism_drivers = cisco,logger
++# Example: mechanism_drivers = openvswitch,brocade
++# Example: mechanism_drivers = linuxbridge,brocade
++
++mechanism_drivers = calico
++
++# (ListOpt) Ordered list of extension driver entrypoints
++# to be loaded from the neutron.ml2.extension_drivers namespace.
++# extension_drivers =
++# Example: extension_drivers = anewextensiondriver
++
++# =========== items for MTU selection and advertisement =============
++# (IntOpt) Path MTU.  The maximum permissible size of an unfragmented
++# packet travelling from and to addresses where encapsulated Neutron
++# traffic is sent.  Drivers calculate maximum viable MTU for
++# validating tenant requests based on this value (typically,
++# path_mtu - max encap header size).  If <=0, the path MTU is
++# indeterminate and no calculation takes place.
++# path_mtu = 0
++
++# (IntOpt) Segment MTU.  The maximum permissible size of an
++# unfragmented packet travelling a L2 network segment.  If <=0,
++# the segment MTU is indeterminate and no calculation takes place.
++# segment_mtu = 0
++
++# (ListOpt) Physical network MTUs.  List of mappings of physical
++# network to MTU value.  The format of the mapping is
++# <physnet>:<mtu val>.  This mapping allows specifying a
++# physical network MTU value that differs from the default
++# segment_mtu value.
++# physical_network_mtus =
++# Example: physical_network_mtus = physnet1:1550, physnet2:1500
++# ======== end of items for MTU selection and advertisement =========
++
++[ml2_type_flat]
++# (ListOpt) List of physical_network names with which flat networks
++# can be created. Use * to allow flat networks with arbitrary
++# physical_network names.
++#
++# flat_networks =
++# Example:flat_networks = physnet1,physnet2
++# Example:flat_networks = *
++flat_networks = ext-net1
++
++[ml2_type_vlan]
++# (ListOpt) List of <physical_network>[:<vlan_min>:<vlan_max>] tuples
++# specifying physical_network names usable for VLAN provider and
++# tenant networks, as well as ranges of VLAN tags on each
++# physical_network available for allocation as tenant networks.
++#
++# network_vlan_ranges =
++# Example: network_vlan_ranges = physnet1:1000:2999,physnet2
++network_vlan_ranges = int-net1:1000:1400
++
++[ml2_type_gre]
++# (ListOpt) Comma-separated list of <tun_min>:<tun_max> tuples enumerating ranges of GRE tunnel IDs that are available for tenant network allocation
++tunnel_id_ranges = 1:10000
++
++[ml2_type_vxlan]
++# (ListOpt) Comma-separated list of <vni_min>:<vni_max> tuples enumerating
++# ranges of VXLAN VNI IDs that are available for tenant network allocation.
++#
++# vni_ranges =
++vni_ranges = 1:10000
++
++# (StrOpt) Multicast group for the VXLAN interface. When configured, will
++# enable sending all broadcast traffic to this multicast group. When left
++# unconfigured, will disable multicast VXLAN mode.
++#
++# vxlan_group =
++# Example: vxlan_group = 239.1.1.1
++vxlan_group = 239.1.1.1
++
++[securitygroup]
++firewall_driver = neutron.agent.linux.iptables_firewall.IptablesFirewallDriver
++
++# Controls if neutron security group is enabled or not.
++# It should be false when you use nova security group.
++enable_security_group = True
++
++# Use ipset to speed-up the iptables security groups. Enabling ipset support
++# requires that ipset is installed on L2 agent node.
++enable_ipset = True
++
++[linux_bridge]
++# cannot bind multiple networks to the same physical adapter
++physical_interface_mappings = int-net1:eth4,ext-net1:eth3
++
++[vxlan]
++enable_vxlan = True
++local_ip = <%= node['bcpc']['floating']['ip'] %>
++l2_population = True
+diff --git a/cookbooks/bcpc/templates/default/neutron.ovs_neutron_plugin.ini.erb b/cookbooks/bcpc/templates/default/neutron.ovs_neutron_plugin.ini.erb
+new file mode 100644
+index 0000000..6471aa4
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/neutron.ovs_neutron_plugin.ini.erb
+@@ -0,0 +1,162 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++[ovs]
++# Do not change this parameter unless you have a good reason to.
++# This is the name of the OVS integration bridge. There is one per hypervisor.
++# The integration bridge acts as a virtual "patch bay". All VM VIFs are
++# attached to this bridge and then "patched" according to their network
++# connectivity.
++#
++# integration_bridge = br-int
++
++# Only used for the agent if tunnel_id_ranges is not empty for
++# the server.  In most cases, the default value should be fine.
++#
++# tunnel_bridge = br-tun
++
++# Peer patch port in integration bridge for tunnel bridge
++# int_peer_patch_port = patch-tun
++
++# Peer patch port in tunnel bridge for integration bridge
++# tun_peer_patch_port = patch-int
++
++# Uncomment this line for the agent if tunnel_id_ranges is not
++# empty for the server. Set local-ip to be the local IP address of
++# this hypervisor.
++#
++# local_ip =
++
++# (ListOpt) Comma-separated list of <physical_network>:<bridge> tuples
++# mapping physical network names to the agent's node-specific OVS
++# bridge names to be used for flat and VLAN networks. The length of
++# bridge names should be no more than 11. Each bridge must
++# exist, and should have a physical network interface configured as a
++# port. All physical networks configured on the server should have
++# mappings to appropriate bridges on each agent.
++#
++# bridge_mappings =
++# Example: bridge_mappings = physnet1:br-eth1
++
++# (BoolOpt) Use veths instead of patch ports to interconnect the integration
++# bridge to physical networks. Support kernel without ovs patch port support
++# so long as it is set to True.
++# use_veth_interconnection = False
++
++# (StrOpt) Which OVSDB backend to use, defaults to 'vsctl'
++# vsctl - The backend based on executing ovs-vsctl
++# native - The backend based on using native OVSDB
++# ovsdb_interface = vsctl
++
++# (StrOpt) The connection string for the native OVSDB backend
++# To enable ovsdb-server to listen on port 6640:
++#   ovs-vsctl set-manager ptcp:6640:127.0.0.1
++# ovsdb_connection = tcp:127.0.0.1:6640
++
++[agent]
++# Agent's polling interval in seconds
++# polling_interval = 2
++
++# Minimize polling by monitoring ovsdb for interface changes
++# minimize_polling = True
++
++# When minimize_polling = True, the number of seconds to wait before
++# respawning the ovsdb monitor after losing communication with it
++# ovsdb_monitor_respawn_interval = 30
++
++# (ListOpt) The types of tenant network tunnels supported by the agent.
++# Setting this will enable tunneling support in the agent. This can be set to
++# either 'gre' or 'vxlan'. If this is unset, it will default to [] and
++# disable tunneling support in the agent.
++# You can specify as many values here as your compute hosts supports.
++#
++# tunnel_types =
++# Example: tunnel_types = gre
++# Example: tunnel_types = vxlan
++# Example: tunnel_types = vxlan, gre
++
++# (IntOpt) The port number to utilize if tunnel_types includes 'vxlan'. By
++# default, this will make use of the Open vSwitch default value of '4789' if
++# not specified.
++#
++# vxlan_udp_port =
++# Example: vxlan_udp_port = 8472
++
++# (IntOpt) This is the MTU size of veth interfaces.
++# Do not change unless you have a good reason to.
++# The default MTU size of veth interfaces is 1500.
++# This option has no effect if use_veth_interconnection is False
++# veth_mtu =
++# Example: veth_mtu = 1504
++
++# (BoolOpt) Flag to enable l2-population extension. This option should only be
++# used in conjunction with ml2 plugin and l2population mechanism driver. It'll
++# enable plugin to populate remote ports macs and IPs (using fdb_add/remove
++# RPC calbbacks instead of tunnel_sync/update) on OVS agents in order to
++# optimize tunnel management.
++#
++# l2_population = False
++
++# Enable local ARP responder. Requires OVS 2.1. This is only used by the l2
++# population ML2 MechanismDriver.
++#
++# arp_responder = False
++
++# Enable suppression of ARP responses that don't match an IP address that
++# belongs to the port from which they originate.
++# Note: This prevents the VMs attached to this agent from spoofing,
++# it doesn't protect them from other devices which have the capability to spoof
++# (e.g. bare metal or VMs attached to agents without this flag set to True).
++# Requires a version of OVS that can match ARP headers.
++#
++# prevent_arp_spoofing = False
++
++# (BoolOpt) Set or un-set the don't fragment (DF) bit on outgoing IP packet
++# carrying GRE/VXLAN tunnel. The default value is True.
++#
++# dont_fragment = True
++
++# (BoolOpt) Set to True on L2 agents to enable support
++# for distributed virtual routing.
++#
++# enable_distributed_routing = False
++
++# (IntOpt) Set new timeout in seconds for new rpc calls after agent receives
++# SIGTERM. If value is set to 0, rpc timeout won't be changed"
++#
++# quitting_rpc_timeout = 10
++
++[securitygroup]
++# Firewall driver for realizing neutron security group function.
++# firewall_driver = neutron.agent.firewall.NoopFirewallDriver
++# Example: firewall_driver = neutron.agent.linux.iptables_firewall.OVSHybridIptablesFirewallDriver
++
++# Controls if neutron security group is enabled or not.
++# It should be false when you use nova security group.
++# enable_security_group = True
++
++#-----------------------------------------------------------------------------
++# Sample Configurations.
++#-----------------------------------------------------------------------------
++#
++# 1. With VLANs on eth1.
++# [ovs]
++# integration_bridge = br-int
++# bridge_mappings = default:br-eth1
++#
++# 2. With GRE tunneling.
++# [ovs]
++# integration_bridge = br-int
++# tunnel_bridge = br-tun
++# local_ip = 10.0.0.3
++#
++# 3. With VXLAN tunneling.
++# [ovs]
++# integration_bridge = br-int
++# tunnel_bridge = br-tun
++# local_ip = 10.0.0.3
++# [agent]
++# tunnel_types = vxlan
+diff --git a/cookbooks/bcpc/templates/default/nova.api-paste.ini.erb b/cookbooks/bcpc/templates/default/nova.api-paste.ini.erb
+deleted file mode 100644
+index 8784ed3..0000000
+--- a/cookbooks/bcpc/templates/default/nova.api-paste.ini.erb
++++ /dev/null
+@@ -1,123 +0,0 @@
+-################################################
+-#
+-#              Generated by Chef
+-#
+-################################################
+-
+-############
+-# Metadata #
+-############
+-[composite:metadata]
+-use = egg:Paste#urlmap
+-/: meta
+-
+-[pipeline:meta]
+-pipeline = ec2faultwrap logrequest metaapp
+-
+-[app:metaapp]
+-paste.app_factory = nova.api.metadata.handler:MetadataRequestHandler.factory
+-
+-#######
+-# EC2 #
+-#######
+-
+-[composite:ec2]
+-use = egg:Paste#urlmap
+-/services/Cloud: ec2cloud
+-
+-[composite:ec2cloud]
+-use = call:nova.api.auth:pipeline_factory
+-noauth = ec2faultwrap logrequest ec2noauth cloudrequest validator ec2executor
+-keystone = ec2faultwrap logrequest ec2keystoneauth cloudrequest validator ec2executor
+-
+-[filter:ec2faultwrap]
+-paste.filter_factory = nova.api.ec2:FaultWrapper.factory
+-
+-[filter:logrequest]
+-paste.filter_factory = nova.api.ec2:RequestLogging.factory
+-
+-[filter:ec2lockout]
+-paste.filter_factory = nova.api.ec2:Lockout.factory
+-
+-[filter:ec2keystoneauth]
+-paste.filter_factory = nova.api.ec2:EC2KeystoneAuth.factory
+-
+-[filter:ec2noauth]
+-paste.filter_factory = nova.api.ec2:NoAuth.factory
+-
+-[filter:cloudrequest]
+-controller = nova.api.ec2.cloud.CloudController
+-paste.filter_factory = nova.api.ec2:Requestify.factory
+-
+-[filter:authorizer]
+-paste.filter_factory = nova.api.ec2:Authorizer.factory
+-
+-[filter:validator]
+-paste.filter_factory = nova.api.ec2:Validator.factory
+-
+-[app:ec2executor]
+-paste.app_factory = nova.api.ec2:Executor.factory
+-
+-#############
+-# OpenStack #
+-#############
+-
+-[composite:osapi_compute]
+-use = call:nova.api.openstack.urlmap:urlmap_factory
+-/: oscomputeversions
+-/v1.1: openstack_compute_api_v2
+-/v2: openstack_compute_api_v2
+-/v3: openstack_compute_api_v3
+-
+-[composite:openstack_compute_api_v2]
+-use = call:nova.api.auth:pipeline_factory
+-noauth = faultwrap sizelimit noauth ratelimit osapi_compute_app_v2
+-keystone = faultwrap sizelimit authtoken keystonecontext ratelimit osapi_compute_app_v2
+-keystone_nolimit = faultwrap sizelimit authtoken keystonecontext osapi_compute_app_v2
+-
+-[composite:openstack_compute_api_v3]
+-use = call:nova.api.auth:pipeline_factory
+-noauth = faultwrap sizelimit noauth_v3 ratelimit_v3 osapi_compute_app_v3
+-keystone = faultwrap sizelimit authtoken keystonecontext ratelimit_v3 osapi_compute_app_v3
+-keystone_nolimit = faultwrap sizelimit authtoken keystonecontext osapi_compute_app_v3
+-
+-[filter:faultwrap]
+-paste.filter_factory = nova.api.openstack:FaultWrapper.factory
+-
+-[filter:noauth]
+-paste.filter_factory = nova.api.openstack.auth:NoAuthMiddleware.factory
+-
+-[filter:noauth_v3]
+-paste.filter_factory = nova.api.openstack.auth:NoAuthMiddlewareV3.factory
+-
+-[filter:ratelimit]
+-paste.filter_factory = nova.api.openstack.compute.limits:RateLimitingMiddleware.factory
+-limits =(POST, "*", .*, 120, MINUTE);(POST, "*/servers", ^/servers, 120, MINUTE);(PUT, "*", .*, 120, MINUTE);(GET, "*changes-since*", .*changes-since.*, 120, MINUTE);(DELETE, "*", .*, 120, MINUTE);(GET, "*/os-fping", ^/os-fping, 12, MINUTE)
+-
+-[filter:ratelimit_v3]
+-paste.filter_factory = nova.api.openstack.compute.plugins.v3.limits:RateLimitingMiddleware.factory
+-
+-[filter:sizelimit]
+-paste.filter_factory = nova.api.sizelimit:RequestBodySizeLimiter.factory
+-
+-[app:osapi_compute_app_v2]
+-paste.app_factory = nova.api.openstack.compute:APIRouter.factory
+-
+-[app:osapi_compute_app_v3]
+-paste.app_factory = nova.api.openstack.compute:APIRouterV3.factory
+-
+-[pipeline:oscomputeversions]
+-pipeline = faultwrap oscomputeversionapp
+-
+-[app:oscomputeversionapp]
+-paste.app_factory = nova.api.openstack.compute.versions:Versions.factory
+-
+-##########
+-# Shared #
+-##########
+-
+-[filter:keystonecontext]
+-paste.filter_factory = nova.api.auth:NovaKeystoneContext.factory
+-
+-[filter:authtoken]
+-paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
+diff --git a/cookbooks/bcpc/templates/default/nova.conf.erb b/cookbooks/bcpc/templates/default/nova.conf.erb
+index 9bb862e..c272794 100644
+--- a/cookbooks/bcpc/templates/default/nova.conf.erb
++++ b/cookbooks/bcpc/templates/default/nova.conf.erb
+@@ -24,7 +24,8 @@ ec2_host=<%=node['bcpc']['management']['vip']%>
+ ec2_workers=<%=node['bcpc']['nova']['workers']%>
+ osapi_compute_listen=<%= node['bcpc']['management']['ip'] %>
+ osapi_compute_workers=<%=node['bcpc']['nova']['workers']%>
+-metadata_listen=169.254.169.254
++#metadata_listen=169.254.169.254
++metadata_listen=<%= node['bcpc']['management']['ip'] %>
+ metadata_host=169.254.169.254
+ metadata_workers=<%=node['bcpc']['nova']['workers']%>
+ dmz_cidr=169.254.169.254/32
+@@ -37,13 +38,6 @@ enabled_apis=metadata
+ vendordata_driver = <%=node["bcpc"]["vendordata_driver"] %>
+ <% end %>
+ 
+-<% if node['bcpc']['nova']['notifications']['enabled'] %>
+-# Nova notification settings
+-notification_topics=<%= node['bcpc']['nova']['notifications']['notification_topics'] %>
+-notification_driver=<%= node['bcpc']['nova']['notifications']['notification_driver'] %>
+-notify_on_state_change=<%= node['bcpc']['nova']['notifications']['notify_on_state_change'] %>
+-<% end %>
+-
+ # Nova Scheduler
+ scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
+ scheduler_default_filters=<%=node['bcpc']['nova']['scheduler_default_filters'].join(',')%>
+@@ -52,37 +46,12 @@ reserved_host_memory_mb=<%=node['bcpc']['nova']['reserved_host_memory_mb']%>
+ cpu_allocation_ratio=<%=node['bcpc']['nova']['cpu_allocation_ratio']%>
+ scheduler_host_subset_size=<%= node['bcpc']['nova']['scheduler_host_subset_size'] %>
+ 
+-# Nova Network settings
+-network_manager=nova.network.manager.VlanManager
+-firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
+-allow_same_net_traffic=False
+-public_interface=<%=node['bcpc']['floating']['interface']%>
+-vlan_interface=<%=node['bcpc']['fixed']['vlan_interface']%>
+-vlan_start=<%=node['bcpc']['fixed']['vlan_start']%>
+-multi_host=True
+-fixed_range=<%=node['bcpc']['fixed']['cidr']%>
+-floating_range=<%=node['bcpc']['floating']['cidr']%>
+-network_size=<%=node['bcpc']['fixed']['network_size']%>
+-flat_network_dns=<%=node['bcpc']['management']['vip']%>
+-dhcpbridge_flagfile=/etc/nova/nova.conf
+-dhcpbridge=/usr/bin/nova-dhcpbridge
+-force_dhcp_release=False
+-share_dhcp_address=True
+-teardown_unused_network_gateway=True
+-fixed_ip_disassociate_timeout=30
+-dhcp_lease_time=<%=node['bcpc']['fixed']['dhcp_lease_time']%>
+-send_arp_for_ha=True
+-my_ip=<%=node['bcpc']['management']['ip']%>
+-routing_source_ip=<%=node['bcpc']['floating']['ip']%>
+-dhcp_domain=<%=node['bcpc']['cluster_domain']%>
+-default_availability_zone=
+-
+ # Nova Compute settings
+ compute_driver=libvirt.LibvirtDriver
+ use_cow_images=True
+ #snapshot_image_format=qcow2
+-sync_power_state_interval=<%= node['bcpc']['nova']['sync_power_state_interval'] %>
+-resume_guests_state_on_host_boot=<%= node['bcpc']['nova']['resume_guests_state_on_host_boot'] %>
++#start_guests_on_host_boot=True
++#resume_guests_state_on_host_boot=True
+ 
+ # Nova Volume settings
+ volume_api_class=nova.volume.cinder.API
+@@ -92,11 +61,7 @@ ssl_only=false
+ key=/etc/nova/ssl-bcpc.key
+ cert=/etc/nova/ssl-bcpc.pem
+ novnc_enabled=True
+-<% if node['bcpc']['vnc']['proxy_use_vip'] %>
+-novncproxy_base_url=https://<%=node['bcpc']['management']['vip']%>:6080/vnc_auto.html
+-<% else %>
+ novncproxy_base_url=https://openstack.<%=node['bcpc']['cluster_domain']%>:6080/vnc_auto.html
+-<% end %>
+ vncserver_proxyclient_address=<%=node['bcpc']['management']['ip']%>
+ novncproxy_host=<%=node['bcpc']['management']['ip']%>
+ vncserver_listen=<%=node['bcpc']['management']['ip']%>
+@@ -138,6 +103,50 @@ quota_<%=key%> = <%= value %>
+ max_age = 28800
+ until_refresh = 10
+ 
++# Networking settings
++network_manager=nova.network.manager.VlanManager
++# firewall_driver=nova.virt.libvirt.firewall.IptablesFirewallDriver
++firewall_driver=nova.virt.firewall.NoopFirewallDriver
++security_group_api = neutron
++allow_same_net_traffic=False
++public_interface=<%=node['bcpc']['floating']['interface']%>
++vlan_interface=<%=node['bcpc']['fixed']['vlan_interface']%>
++vlan_start=<%=node['bcpc']['fixed']['vlan_start']%>
++multi_host=True
++fixed_range=<%=node['bcpc']['fixed']['cidr']%>
++floating_range=<%=node['bcpc']['floating']['cidr']%>
++network_size=<%=node['bcpc']['fixed']['network_size']%>
++flat_network_dns=<%=node['bcpc']['management']['vip']%>
++dhcpbridge_flagfile=/etc/nova/nova.conf
++dhcpbridge=/usr/bin/nova-dhcpbridge
++force_dhcp_release=False
++share_dhcp_address=True
++teardown_unused_network_gateway=True
++fixed_ip_disassociate_timeout=30
++dhcp_lease_time=<%=node['bcpc']['fixed']['dhcp_lease_time']%>
++send_arp_for_ha=True
++my_ip=<%=node['bcpc']['management']['ip']%>
++routing_source_ip=<%=node['bcpc']['floating']['ip']%>
++dhcp_domain=<%=node['bcpc']['cluster_domain']%>
++default_availability_zone=
++
++<% if node['bcpc']['enabled']['neutron'] %>
++network_api_class = nova.network.neutronv2.api.API
++# linuxnet_interface_driver = nova.network.linux_net.NeutronLinuxBridgeInterfaceDriver
++vif_plugging_is_fatal = False
++vif_plugging_timeout = 0
++
++[neutron]
++url = <%= node['bcpc']['protocol']['neutron'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:9696
++admin_tenant_name = <%= node['bcpc']['admin_tenant'] %>
++auth_strategy = keystone
++admin_auth_url = <%= node['bcpc']['protocol']['keystone'] %>://openstack.<%= node['bcpc']['cluster_domain'] %>:35357/v2.0/
++admin_username = <%= get_config('keystone-admin-user') %>
++admin_password = <%= get_config('keystone-admin-password') %>
++<% else %>
++network_api_class = nova.network.api.API
++<% end %>
++
+ [oslo_concurrency]
+ lock_path=/var/lock/nova
+ 
+diff --git a/cookbooks/bcpc/templates/default/nova.kilo.api-paste.ini.erb b/cookbooks/bcpc/templates/default/nova.kilo.api-paste.ini.erb
+new file mode 100644
+index 0000000..8784ed3
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/nova.kilo.api-paste.ini.erb
+@@ -0,0 +1,123 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++############
++# Metadata #
++############
++[composite:metadata]
++use = egg:Paste#urlmap
++/: meta
++
++[pipeline:meta]
++pipeline = ec2faultwrap logrequest metaapp
++
++[app:metaapp]
++paste.app_factory = nova.api.metadata.handler:MetadataRequestHandler.factory
++
++#######
++# EC2 #
++#######
++
++[composite:ec2]
++use = egg:Paste#urlmap
++/services/Cloud: ec2cloud
++
++[composite:ec2cloud]
++use = call:nova.api.auth:pipeline_factory
++noauth = ec2faultwrap logrequest ec2noauth cloudrequest validator ec2executor
++keystone = ec2faultwrap logrequest ec2keystoneauth cloudrequest validator ec2executor
++
++[filter:ec2faultwrap]
++paste.filter_factory = nova.api.ec2:FaultWrapper.factory
++
++[filter:logrequest]
++paste.filter_factory = nova.api.ec2:RequestLogging.factory
++
++[filter:ec2lockout]
++paste.filter_factory = nova.api.ec2:Lockout.factory
++
++[filter:ec2keystoneauth]
++paste.filter_factory = nova.api.ec2:EC2KeystoneAuth.factory
++
++[filter:ec2noauth]
++paste.filter_factory = nova.api.ec2:NoAuth.factory
++
++[filter:cloudrequest]
++controller = nova.api.ec2.cloud.CloudController
++paste.filter_factory = nova.api.ec2:Requestify.factory
++
++[filter:authorizer]
++paste.filter_factory = nova.api.ec2:Authorizer.factory
++
++[filter:validator]
++paste.filter_factory = nova.api.ec2:Validator.factory
++
++[app:ec2executor]
++paste.app_factory = nova.api.ec2:Executor.factory
++
++#############
++# OpenStack #
++#############
++
++[composite:osapi_compute]
++use = call:nova.api.openstack.urlmap:urlmap_factory
++/: oscomputeversions
++/v1.1: openstack_compute_api_v2
++/v2: openstack_compute_api_v2
++/v3: openstack_compute_api_v3
++
++[composite:openstack_compute_api_v2]
++use = call:nova.api.auth:pipeline_factory
++noauth = faultwrap sizelimit noauth ratelimit osapi_compute_app_v2
++keystone = faultwrap sizelimit authtoken keystonecontext ratelimit osapi_compute_app_v2
++keystone_nolimit = faultwrap sizelimit authtoken keystonecontext osapi_compute_app_v2
++
++[composite:openstack_compute_api_v3]
++use = call:nova.api.auth:pipeline_factory
++noauth = faultwrap sizelimit noauth_v3 ratelimit_v3 osapi_compute_app_v3
++keystone = faultwrap sizelimit authtoken keystonecontext ratelimit_v3 osapi_compute_app_v3
++keystone_nolimit = faultwrap sizelimit authtoken keystonecontext osapi_compute_app_v3
++
++[filter:faultwrap]
++paste.filter_factory = nova.api.openstack:FaultWrapper.factory
++
++[filter:noauth]
++paste.filter_factory = nova.api.openstack.auth:NoAuthMiddleware.factory
++
++[filter:noauth_v3]
++paste.filter_factory = nova.api.openstack.auth:NoAuthMiddlewareV3.factory
++
++[filter:ratelimit]
++paste.filter_factory = nova.api.openstack.compute.limits:RateLimitingMiddleware.factory
++limits =(POST, "*", .*, 120, MINUTE);(POST, "*/servers", ^/servers, 120, MINUTE);(PUT, "*", .*, 120, MINUTE);(GET, "*changes-since*", .*changes-since.*, 120, MINUTE);(DELETE, "*", .*, 120, MINUTE);(GET, "*/os-fping", ^/os-fping, 12, MINUTE)
++
++[filter:ratelimit_v3]
++paste.filter_factory = nova.api.openstack.compute.plugins.v3.limits:RateLimitingMiddleware.factory
++
++[filter:sizelimit]
++paste.filter_factory = nova.api.sizelimit:RequestBodySizeLimiter.factory
++
++[app:osapi_compute_app_v2]
++paste.app_factory = nova.api.openstack.compute:APIRouter.factory
++
++[app:osapi_compute_app_v3]
++paste.app_factory = nova.api.openstack.compute:APIRouterV3.factory
++
++[pipeline:oscomputeversions]
++pipeline = faultwrap oscomputeversionapp
++
++[app:oscomputeversionapp]
++paste.app_factory = nova.api.openstack.compute.versions:Versions.factory
++
++##########
++# Shared #
++##########
++
++[filter:keystonecontext]
++paste.filter_factory = nova.api.auth:NovaKeystoneContext.factory
++
++[filter:authtoken]
++paste.filter_factory = keystoneclient.middleware.auth_token:filter_factory
+diff --git a/cookbooks/bcpc/templates/default/nova.liberty.api-paste.ini.erb b/cookbooks/bcpc/templates/default/nova.liberty.api-paste.ini.erb
+new file mode 100644
+index 0000000..4b14427
+--- /dev/null
++++ b/cookbooks/bcpc/templates/default/nova.liberty.api-paste.ini.erb
+@@ -0,0 +1,146 @@
++################################################
++#
++#              Generated by Chef
++#
++################################################
++
++############
++# Metadata #
++############
++[composite:metadata]
++use = egg:Paste#urlmap
++/: meta
++
++[pipeline:meta]
++pipeline = ec2faultwrap logrequest metaapp
++
++[app:metaapp]
++paste.app_factory = nova.api.metadata.handler:MetadataRequestHandler.factory
++
++#######
++# EC2 #
++#######
++
++# NOTE: this is now deprecated in favor of https://github.com/stackforge/ec2-api
++[composite:ec2]
++use = egg:Paste#urlmap
++/: ec2cloud
++
++[composite:ec2cloud]
++use = call:nova.api.auth:pipeline_factory
++noauth2 = ec2faultwrap logrequest ec2noauth cloudrequest validator ec2executor
++keystone = ec2faultwrap logrequest ec2keystoneauth cloudrequest validator ec2executor
++
++[filter:ec2faultwrap]
++paste.filter_factory = nova.api.ec2:FaultWrapper.factory
++
++[filter:logrequest]
++paste.filter_factory = nova.api.ec2:RequestLogging.factory
++
++[filter:ec2lockout]
++paste.filter_factory = nova.api.ec2:Lockout.factory
++
++[filter:ec2keystoneauth]
++paste.filter_factory = nova.api.ec2:EC2KeystoneAuth.factory
++
++[filter:ec2noauth]
++paste.filter_factory = nova.api.ec2:NoAuth.factory
++
++[filter:cloudrequest]
++controller = nova.api.ec2.cloud.CloudController
++paste.filter_factory = nova.api.ec2:Requestify.factory
++
++[filter:authorizer]
++paste.filter_factory = nova.api.ec2:Authorizer.factory
++
++[filter:validator]
++paste.filter_factory = nova.api.ec2:Validator.factory
++
++[app:ec2executor]
++paste.app_factory = nova.api.ec2:Executor.factory
++
++#############
++# OpenStack #
++#############
++
++[composite:osapi_compute]
++use = call:nova.api.openstack.urlmap:urlmap_factory
++/: oscomputeversions
++# starting in Liberty the v21 implementation replaces the v2
++# implementation and is suggested that you use it as the default. If
++# this causes issues with your clients you can rollback to the
++# *frozen* v2 api by commenting out the above stanza and using the
++# following instead::
++# /v1.1: openstack_compute_api_legacy_v2
++# /v2: openstack_compute_api_legacy_v2
++# if rolling back to v2 fixes your issue please file a critical bug
++# at - https://bugs.launchpad.net/nova/+bugs
++#
++# v21 is an exactly feature match for v2, except it has more stringent
++# input validation on the wsgi surface (prevents fuzzing early on the
++# API). It also provides new features via API microversions which are
++# opt into for clients. Unaware clients will receive the same frozen
++# v2 API feature set, but with some relaxed validation
++/v1.1: openstack_compute_api_v21_legacy_v2_compatible
++/v2: openstack_compute_api_v21_legacy_v2_compatible
++/v2.1: openstack_compute_api_v21
++
++# NOTE: this is deprecated in favor of openstack_compute_api_v21_legacy_v2_compatible
++[composite:openstack_compute_api_legacy_v2]
++use = call:nova.api.auth:pipeline_factory
++noauth2 = compute_req_id faultwrap sizelimit noauth2 legacy_ratelimit osapi_compute_app_legacy_v2
++keystone = compute_req_id faultwrap sizelimit authtoken keystonecontext legacy_ratelimit osapi_compute_app_legacy_v2
++keystone_nolimit = compute_req_id faultwrap sizelimit authtoken keystonecontext osapi_compute_app_legacy_v2
++
++[composite:openstack_compute_api_v21]
++use = call:nova.api.auth:pipeline_factory_v21
++noauth2 = compute_req_id faultwrap sizelimit noauth2 osapi_compute_app_v21
++keystone = compute_req_id faultwrap sizelimit authtoken keystonecontext osapi_compute_app_v21
++
++[composite:openstack_compute_api_v21_legacy_v2_compatible]
++use = call:nova.api.auth:pipeline_factory_v21
++noauth2 = compute_req_id faultwrap sizelimit noauth2 legacy_v2_compatible osapi_compute_app_v21
++keystone = compute_req_id faultwrap sizelimit authtoken keystonecontext legacy_v2_compatible osapi_compute_app_v21
++
++[filter:request_id]
++paste.filter_factory = oslo_middleware:RequestId.factory
++
++[filter:compute_req_id]
++paste.filter_factory = nova.api.compute_req_id:ComputeReqIdMiddleware.factory
++
++[filter:faultwrap]
++paste.filter_factory = nova.api.openstack:FaultWrapper.factory
++
++[filter:noauth2]
++paste.filter_factory = nova.api.openstack.auth:NoAuthMiddleware.factory
++
++[filter:legacy_ratelimit]
++paste.filter_factory = nova.api.openstack.compute.limits:RateLimitingMiddleware.factory
++
++[filter:sizelimit]
++paste.filter_factory = oslo_middleware:RequestBodySizeLimiter.factory
++
++[filter:legacy_v2_compatible]
++paste.filter_factory = nova.api.openstack:LegacyV2CompatibleWrapper.factory
++
++[app:osapi_compute_app_legacy_v2]
++paste.app_factory = nova.api.openstack.compute:APIRouter.factory
++
++[app:osapi_compute_app_v21]
++paste.app_factory = nova.api.openstack.compute:APIRouterV21.factory
++
++[pipeline:oscomputeversions]
++pipeline = faultwrap oscomputeversionapp
++
++[app:oscomputeversionapp]
++paste.app_factory = nova.api.openstack.compute.versions:Versions.factory
++
++##########
++# Shared #
++##########
++
++[filter:keystonecontext]
++paste.filter_factory = nova.api.auth:NovaKeystoneContext.factory
++
++[filter:authtoken]
++paste.filter_factory = keystonemiddleware.auth_token:filter_factory
+diff --git a/cookbooks/bcpc/templates/default/powerdns_generate_float_records.sql.erb b/cookbooks/bcpc/templates/default/powerdns_generate_float_records.sql.erb
+index bb393ed..885a9b2 100644
+--- a/cookbooks/bcpc/templates/default/powerdns_generate_float_records.sql.erb
++++ b/cookbooks/bcpc/templates/default/powerdns_generate_float_records.sql.erb
+@@ -10,13 +10,9 @@ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_re
+ -- then the temporary table is cleaned up
+ CREATE TEMPORARY TABLE soa_records_to_delete_<%=get_config('powerdns-update-timestamp')%> (id int);
+ <% [@cluster_domain, @reverse_float_zone, @reverse_fixed_zone, @management_zone].each do |zone| %>
+-
+--- delete malformed NS record where the content is the management VIP instead of cluster domain
+-DELETE FROM <%= @database_name %>.records WHERE type='NS' and content='<%= @management_vip %>';
+-
+ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_record_type) VALUES
+-    ((SELECT id FROM <%=@database_name%>.domains WHERE name='<%=zone%>'), '<%=zone%>', 'NS', '<%= @cluster_domain %>', 'STATIC')
+-    ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM <%=@database_name%>.domains WHERE name='<%=zone%>'), name='<%=zone%>', type='NS', content='<%= @cluster_domain %>', bcpc_record_type='STATIC';
++    ((SELECT id FROM <%=@database_name%>.domains WHERE name='<%=zone%>'), '<%=zone%>', 'NS', '<%=@management_vip%>', 'STATIC')
++    ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM <%=@database_name%>.domains WHERE name='<%=zone%>'), name='<%=zone%>', type='NS', content='<%=@management_vip%>', bcpc_record_type='STATIC';
+ 
+ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_record_type) VALUES
+     ((SELECT id FROM <%=@database_name%>.domains WHERE name='<%=zone%>'), '<%=zone%>', 'SOA', '<%=@cluster_domain%> root.<%=@cluster_domain%> <%=get_config('powerdns-update-timestamp')%>', 'static')
+@@ -66,8 +62,8 @@ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_re
+     ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), name='kibana.<%=@cluster_domain%>', type='A', content='<%=@monitoring_vip%>', bcpc_record_type='STATIC';
+ -- insert A record and CNAME for object storage
+ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_record_type) VALUES
+-    ((SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), 's3.<%=@cluster_domain%>', 'A', '<%=@floating_vip%>', 'STATIC')
+-    ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), name='s3.<%=@cluster_domain%>', type='A', content='<%=@floating_vip%>', bcpc_record_type='STATIC';
++    ((SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), 's3.<%=@cluster_domain%>', 'A', '<%= @storage_vip %>', 'STATIC')
++    ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), name='s3.<%=@cluster_domain%>', type='A', content='<%=@storage_vip%>', bcpc_record_type='STATIC';
+ INSERT INTO <%=@database_name%>.records (domain_id, name, type, content, bcpc_record_type) VALUES
+     ((SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), '*.s3.<%=@cluster_domain%>', 'CNAME', 's3.<%=@cluster_domain%>', 'STATIC')
+     ON DUPLICATE KEY UPDATE domain_id=(SELECT id FROM domains WHERE name='<%=@cluster_domain%>'), name='*.s3.<%=@cluster_domain%>', type='CNAME', content='s3.<%=@cluster_domain%>', bcpc_record_type='STATIC';
+diff --git a/cookbooks/bcpc/templates/default/sysctl-70-bcpc.conf.erb b/cookbooks/bcpc/templates/default/sysctl-70-bcpc.conf.erb
+index f7f34fb..0373aa5 100644
+--- a/cookbooks/bcpc/templates/default/sysctl-70-bcpc.conf.erb
++++ b/cookbooks/bcpc/templates/default/sysctl-70-bcpc.conf.erb
+@@ -31,6 +31,13 @@ net.ipv4.tcp_max_tw_buckets = 2000000
+ net.ipv4.tcp_tw_reuse = 1
+ net.ipv4.tcp_fin_timeout = 10
+ 
++<% if node['bcpc']['enabled']['neutron'] %>
++net.ipv4.conf.default.rp_filter = 0
++net.ipv4.conf.all.rp_filter = 0
++# net.bridge.bridge-nf-call-iptables = 1
++# net.bridge.bridge-nf-call-ip6tables = 1
++<% end %>
++
+ # Disable TCP slow start on idle connections
+ net.ipv4.tcp_slow_start_after_idle = 0
+ 
+diff --git a/docs/example_apt_mirror_config.list b/docs/example_apt_mirror_config.list
+index a93d1cf..a6b245f 100644
+--- a/docs/example_apt_mirror_config.list
++++ b/docs/example_apt_mirror_config.list
+@@ -70,6 +70,10 @@ deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-proposed/kilo main
+ deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/kilo main
+ deb-i386 http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-proposed/kilo main
+ deb-i386 http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/kilo main
++deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-proposed/liberty main
++deb http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/liberty main
++deb-i386 http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-proposed/liberty main
++deb-i386 http://ubuntu-cloud.archive.canonical.com/ubuntu trusty-updates/liberty main
+ clean http://ubuntu-cloud.archive.canonical.com/ubuntu
+ 
+ # zabbix repository in BCPC
+diff --git a/environments/Test-Laptop-Vagrant.json b/environments/Test-Laptop-Vagrant.json
+index 8d2e80d..ff02423 100644
+--- a/environments/Test-Laptop-Vagrant.json
++++ b/environments/Test-Laptop-Vagrant.json
+@@ -7,9 +7,9 @@
+       },
+       "virt_type" : "qemu",
+       "enabled": {
+-        "logging": true,
+-        "monitoring": true,
+-        "metrics": true,
++        "logging": false,
++        "monitoring": false,
++        "metrics": false,
+         "dns": true,
+         "secure_fixed_networks" : false
+       },
+@@ -41,7 +41,8 @@
+         "interface" : "eth2",
+         "netmask" : "255.255.255.0",
+         "cidr" : "172.16.100.0/24",
+-        "gateway" : "172.16.100.3"
++        "gateway" : "172.16.100.3",
++        "vip": "172.16.100.5"
+       },
+       "floating": {
+         "vip" : "192.168.100.5",
+diff --git a/roles/BCPC-Compute.json b/roles/BCPC-Compute.json
+index 4dac221..8ad87b1 100644
+--- a/roles/BCPC-Compute.json
++++ b/roles/BCPC-Compute.json
+@@ -5,12 +5,13 @@
+       "role[Basic]",
+       "recipe[bcpc]",
+       "recipe[bcpc::system]",
+-      "recipe[bcpc::networking]",
++      "recipe[bcpc::networking-prereqs]",
+       "recipe[bcpc::networking-link-test]",
+       "recipe[bcpc::networking-gw-test]",
+       "recipe[bcpc::networking-route-test]",
+       "recipe[bcpc::ceph-work]",
+       "recipe[bcpc::ceph-osd]",
++      "recipe[bcpc::neutron-work]",
+       "recipe[bcpc::nova-work]",
+       "role[BCPC-Rgwnode]",
+       "recipe[bcpc::diamond]",
+@@ -18,11 +19,10 @@
+       "recipe[bcpc::tpm]",
+       "recipe[bcpc::checks-work]",
+       "recipe[bcpc::zabbix-agent]",
+-      "recipe[bcpc::host-aggregates]"
++      "recipe[bcpc::host-aggregates]",
++      "recipe[bcpc::bird]",
++      "recipe[bcpc::calico-compute]"
+     ],
+     "description": "Run list for a general compute function. Building block, not designed as an applied role.",
+     "chef_type": "role"
+ }
+-
+-
+-
+diff --git a/roles/BCPC-Ephemeral.json b/roles/BCPC-Ephemeral.json
+index 532221d..47eb725 100644
+--- a/roles/BCPC-Ephemeral.json
++++ b/roles/BCPC-Ephemeral.json
+@@ -5,20 +5,23 @@
+       "role[Basic]",
+       "recipe[bcpc]",
+       "recipe[bcpc::system]",
+-      "recipe[bcpc::networking]",
++      "recipe[bcpc::networking-prereqs]",
+       "recipe[bcpc::networking-link-test]",
+       "recipe[bcpc::networking-gw-test]",
+       "recipe[bcpc::networking-route-test]",
+       "recipe[bcpc::software-raid]",
+       "recipe[bcpc::lvm]",
+       "recipe[bcpc::ceph-work]",
++      "recipe[bcpc::neutron-work]",
+       "recipe[bcpc::nova-work]",
+       "recipe[bcpc::diamond]",
+       "recipe[bcpc::fluentd]",
+       "recipe[bcpc::tpm]",
+       "recipe[bcpc::host-aggregates]",
+       "recipe[bcpc::checks-work]",
+-      "recipe[bcpc::zabbix-agent]"
++      "recipe[bcpc::zabbix-agent]",
++      "recipe[bcpc::bird]",
++      "recipe[bcpc::calico-compute]"
+     ],
+     "description": "Run list for a general ephemeral compute function. Building block, not designed as an applied role.",
+     "chef_type": "role"
+diff --git a/roles/BCPC-Headnode.json b/roles/BCPC-Headnode.json
+index 280c0d0..67d3b6b 100644
+--- a/roles/BCPC-Headnode.json
++++ b/roles/BCPC-Headnode.json
+@@ -8,7 +8,7 @@
+       "recipe[bcpc]",
+       "recipe[bcpc::check_cluster]",
+       "recipe[bcpc::system]",
+-      "recipe[bcpc::networking]",
++      "recipe[bcpc::networking-prereqs]",
+       "recipe[bcpc::networking-link-test]",
+       "recipe[bcpc::networking-gw-test]",
+       "recipe[bcpc::networking-route-test]",
+@@ -23,6 +23,7 @@
+       "recipe[bcpc::keystone]",
+       "recipe[bcpc::glance]",
+       "recipe[bcpc::cinder]",
++      "recipe[bcpc::neutron-head]",
+       "recipe[bcpc::nova-head]",
+       "recipe[bcpc::powerdns-nova]",
+       "recipe[bcpc::heat]",
+@@ -31,7 +32,9 @@
+       "recipe[bcpc::checks-head]",
+       "recipe[bcpc::flavors]",
+       "recipe[bcpc::rgw-quota]",
+-      "recipe[bcpc::os-quota]"
++      "recipe[bcpc::os-quota]",
++      "recipe[bcpc::bird]",
++      "recipe[bcpc::calico-head]"
+     ],
+     "description": "A highly-available head node in a BCPC cluster",
+     "chef_type": "role",
+diff --git a/roles/BCPC-Monitoring.json b/roles/BCPC-Monitoring.json
+index 797d29e..799aaab 100644
+--- a/roles/BCPC-Monitoring.json
++++ b/roles/BCPC-Monitoring.json
+@@ -7,7 +7,7 @@
+       "role[Basic]",
+       "recipe[bcpc]",
+       "recipe[bcpc::system]",
+-      "recipe[bcpc::networking]",
++      "recipe[bcpc::networking-prereqs]",
+       "recipe[bcpc::networking-link-test]",
+       "recipe[bcpc::networking-gw-test]",
+       "recipe[bcpc::networking-route-test]",
+diff --git a/roles/BCPC-Rgwnode.json b/roles/BCPC-Rgwnode.json
+index 0124d07..546e463 100644
+--- a/roles/BCPC-Rgwnode.json
++++ b/roles/BCPC-Rgwnode.json
+@@ -7,7 +7,7 @@
+       "role[Basic]",
+       "recipe[bcpc]",
+       "recipe[bcpc::system]",
+-      "recipe[bcpc::networking]",
++      "recipe[bcpc::networking-prereqs]",
+       "recipe[bcpc::networking-link-test]",
+       "recipe[bcpc::networking-gw-test]",
+       "recipe[bcpc::networking-route-test]",
